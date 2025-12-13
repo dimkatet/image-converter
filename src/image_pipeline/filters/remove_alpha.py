@@ -4,18 +4,18 @@ from .base import ImageFilter
 
 class RemoveAlphaFilter(ImageFilter):
     """
-    Фильтр, который удаляет альфа-канал из изображения.
-    Если альфа-канала нет — возвращает изображение без изменений.
+    Filter that removes the alpha channel from an image.
+    If there is no alpha channel, returns the image unchanged.
     """
 
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
 
-        # Если меньше 4 каналов — нечего удалять
+        # If less than 4 channels, nothing to remove
         if pixels.ndim < 3 or pixels.shape[-1] < 4:
             return pixels
 
-        # Отрезаем последний канал (A)
+        # Remove the last channel (A)
         rgb = pixels[..., :3]
 
         return rgb.astype(pixels.dtype)

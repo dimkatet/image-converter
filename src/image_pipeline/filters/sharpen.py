@@ -4,12 +4,12 @@ from .base import ImageFilter
 
 
 class SharpenFilter(ImageFilter):
-    """Фильтр увеличения резкости"""
+    """Sharpening filter"""
     
     def __init__(self, strength: float = 1.0):
         """
         Args:
-            strength: Сила эффекта (0.0 - без изменений, выше - сильнее)
+            strength: Effect strength (0.0 - no change, higher - stronger)
         """
         super().__init__()
         self.strength = strength
@@ -24,7 +24,7 @@ class SharpenFilter(ImageFilter):
             [0, -1, 0]
         ]) * self.strength
         
-        # Нормализуем центральный элемент
+        # Normalize the central element
         kernel[1, 1] = 1 + 4 * self.strength
         
         if len(pixels.shape) == 2:

@@ -5,7 +5,7 @@ from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.writer import ImageWriter
 
 class ImageSaver:
-    """Вспомогательный класс для групповых операций сохранения"""
+    """Helper class for batch save operations"""
     
     @staticmethod
     def save_with_format_conversion(data: Union['ImageData', np.ndarray],
@@ -13,15 +13,15 @@ class ImageSaver:
                                     target_dtype: Optional[np.dtype] = None,
                                     **save_options) -> None:
         """
-        Сохранение с конвертацией типа данных
+        Save with data type conversion
         
         Args:
-            data: ImageData или numpy array
-            output_path: Путь для сохранения
-            target_dtype: Целевой тип данных (uint8, uint16, float32 и т.д.)
-            **save_options: Дополнительные параметры для сохранения
+            data: ImageData or numpy array
+            output_path: Path to save
+            target_dtype: Target data type (uint8, uint16, float32, etc.)
+            **save_options: Additional save options
         """
-        # Извлекаем пиксели
+        # Extract pixels
         if hasattr(data, 'pixels'):
             pixels = data.pixels
             metadata = data.metadata
@@ -29,20 +29,20 @@ class ImageSaver:
             pixels = data
             metadata = {}
         
-        # Конвертируем тип данных если нужно
+        # Convert data type if needed
         if target_dtype and pixels.dtype != target_dtype:
             pixels = ImageSaver._convert_dtype(pixels, target_dtype)
         
-        # Сохраняем
+        # Save
         writer = ImageWriter(output_path)
         writer.write(pixels, metadata=metadata, **save_options)
     
     @staticmethod
     def _convert_dtype(pixels: np.ndarray, target_dtype: np.dtype) -> np.ndarray:
-        """Конвертация типа данных с правильным масштабированием"""
+        """Convert data type with proper scaling"""
         source_dtype = pixels.dtype
         
-        # Если типы одинаковые, возвращаем как есть
+        # If types are the same, return as is
         if source_dtype == target_dtype:
             return pixels
         
@@ -66,12 +66,12 @@ class ImageSaver:
             max_val = np.iinfo(source_dtype).max
             return (pixels.astype(target_dtype) / max_val)
         
-        # uint -> uint другой разрядности
+        # uint -> uint of different bit depth
         elif np.issubdtype(source_dtype, np.unsignedinteger) and \
              np.issubdtype(target_dtype, np.unsignedinteger):
             source_max = np.iinfo(source_dtype).max
             target_max = np.iinfo(target_dtype).max
             return (pixels.astype(np.float64) / source_max * target_max).astype(target_dtype)
         
-        # Для остальных случаев просто приводим тип
+        # For all other cases just cast the type
         return pixels.astype(target_dtype)

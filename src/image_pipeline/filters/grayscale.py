@@ -3,12 +3,12 @@ from .base import ImageFilter
 
 
 class GrayscaleFilter(ImageFilter):
-    """Фильтр для преобразования в оттенки серого"""
+    """Filter for converting to grayscale"""
     
     def __init__(self, method: str = 'luminosity'):
         """
         Args:
-            method: Метод преобразования ('luminosity', 'average', 'lightness')
+            method: Conversion method ('luminosity', 'average', 'lightness')
         """
         super().__init__()
         self.method = method
@@ -16,18 +16,18 @@ class GrayscaleFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Если уже grayscale, возвращаем как есть
+        # If already grayscale, return as is
         if len(pixels.shape) == 2:
             return pixels
         
-        # Если есть только один канал
+        # If only one channel
         if pixels.shape[-1] == 1:
             return pixels.squeeze()
         
-        # Преобразование RGB в grayscale
+        # Convert RGB to grayscale
         if pixels.shape[-1] >= 3:
             if self.method == 'luminosity':
-                # Стандартная формула luminosity
+                # Standard luminosity formula
                 weights = np.array([0.299, 0.587, 0.114])
                 gray = np.dot(pixels[..., :3], weights)
             elif self.method == 'average':
@@ -36,7 +36,7 @@ class GrayscaleFilter(ImageFilter):
                 gray = (np.max(pixels[..., :3], axis=-1) + 
                        np.min(pixels[..., :3], axis=-1)) / 2
             else:
-                raise ValueError(f"Неизвестный метод: {self.method}")
+                raise ValueError(f"Unknown method: {self.method}")
             
             return gray.astype(pixels.dtype)
         

@@ -5,12 +5,12 @@ from image_pipeline.filters.base import ImageFilter
 
 
 class BlurFilter(ImageFilter):
-    """Фильтр размытия (Gaussian blur)"""
+    """Blur filter (Gaussian blur)"""
     
     def __init__(self, sigma: float = 1.0):
         """
         Args:
-            sigma: Стандартное отклонение для Gaussian blur
+            sigma: Standard deviation for Gaussian blur
         """
         super().__init__()
         self.sigma = sigma
@@ -21,7 +21,7 @@ class BlurFilter(ImageFilter):
         if self.sigma <= 0:
             return pixels
         
-        # Применяем размытие к каждому каналу отдельно
+        # Apply blur to each channel separately
         if len(pixels.shape) == 2:
             return ndimage.gaussian_filter(pixels, sigma=self.sigma)
         else:

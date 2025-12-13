@@ -1,52 +1,52 @@
 """
-Модуль для чтения изображений различных форматов
+Module for reading images of various formats
 """
 import numpy as np
 from typing import Dict, Any
 
 
 class ImageData:
-    """Класс для хранения данных изображения и метаданных"""
+    """Class for storing image data and metadata"""
     
     def __init__(self, pixels: np.ndarray, metadata: Dict[str, Any]):
         """
-        Инициализация данных изображения
+        Initialize image data
         
         Args:
-            pixels: Массив numpy с пикселями изображения
-            metadata: Словарь с метаданными
+            pixels: Numpy array with image pixels
+            metadata: Dictionary with metadata
         """
         self.pixels = pixels
         self.metadata = metadata
     
     @property
     def shape(self) -> tuple:
-        """Форма массива пикселей (height, width, channels)"""
+        """Shape of the pixel array (height, width, channels)"""
         return self.pixels.shape
     
     @property
     def dtype(self) -> np.dtype:
-        """Тип данных пикселей"""
+        """Pixel data type"""
         return self.pixels.dtype
     
     @property
     def width(self) -> int:
-        """Ширина изображения"""
+        """Image width"""
         return self.pixels.shape[1]
     
     @property
     def height(self) -> int:
-        """Высота изображения"""
+        """Image height"""
         return self.pixels.shape[0]
     
     @property
     def channels(self) -> int:
-        """Количество каналов"""
+        """Number of channels"""
         return self.pixels.shape[2] if len(self.pixels.shape) > 2 else 1
     
     @property
     def format(self) -> str:
-        """Формат исходного файла"""
+        """Source file format"""
         return self.metadata.get('format', 'unknown')
     
     def __repr__(self) -> str:

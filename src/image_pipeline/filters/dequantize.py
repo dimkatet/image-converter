@@ -6,15 +6,15 @@ from .base import ImageFilter
 
 class DequantizeFilter(ImageFilter):
     """
-    Фильтр для деквантизации integer значений обратно в float
-    Преобразует [0, 2^bit_depth - 1] → [0, 1]
+    Filter for dequantizing integer values back to float
+    Converts [0, 2^bit_depth - 1] → [0, 1]
     """
     
     def __init__(self, bit_depth: Optional[int] = None):
         """
         Args:
-            bit_depth: Битность исходных данных (8, 10, 12, 16, 32)
-                      Если None, определяется автоматически из dtype
+            bit_depth: Bit depth of the source data (8, 10, 12, 16, 32)
+                      If None, determined automatically from dtype
         """
         super().__init__()
         self.bit_depth = bit_depth
@@ -22,7 +22,7 @@ class DequantizeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Определяем битность если не указана
+        # Determine bit depth if not specified
         if self.bit_depth is None:
             if pixels.dtype == np.uint8:
                 bit_depth = 8
@@ -31,13 +31,13 @@ class DequantizeFilter(ImageFilter):
             elif pixels.dtype == np.uint32:
                 bit_depth = 32
             else:
-                raise ValueError(f"Не удалось определить битность для типа {pixels.dtype}")
+                raise ValueError(f"Could not determine bit depth for type {pixels.dtype}")
         else:
             bit_depth = self.bit_depth
         
         max_value = (2 ** bit_depth) - 1
         
-        # Нормализуем в [0, 1]
+        # Normalize to [0, 1]
         normalized = pixels.astype(np.float32) / max_value
         
         return normalized

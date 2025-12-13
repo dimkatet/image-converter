@@ -4,8 +4,8 @@ from .base import ImageFilter
 
 class PQDecodeFilter(ImageFilter):
     """
-    Фильтр для декодирования PQ (обратное преобразование)
-    Преобразует PQ-кодированные значения обратно в линейные HDR значения
+    Filter for PQ decoding (inverse transformation)
+    Converts PQ-encoded values back to linear HDR values
     """
     
     M1 = 2610.0 / 16384.0
@@ -17,7 +17,7 @@ class PQDecodeFilter(ImageFilter):
     def __init__(self, peak_luminance: float = 10000.0):
         """
         Args:
-            peak_luminance: Пиковая яркость в нитах (должна совпадать с encoding)
+            peak_luminance: Peak luminance in nits (should match encoding)
         """
         super().__init__()
         self.peak_luminance = peak_luminance
@@ -25,19 +25,19 @@ class PQDecodeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Обратное преобразование PQ
+        # Inverse PQ transformation
         # L = ((max(Y^(1/m2) - c1, 0)) / (c2 - c3 * Y^(1/m2)))^(1/m1)
         Y_pow = np.power(np.maximum(pixels, 0.0), 1.0 / self.M2)
         
         numerator = np.maximum(Y_pow - self.C1, 0.0)
         denominator = self.C2 - self.C3 * Y_pow
         
-        # Избегаем деления на ноль
+        # Avoid division by zero
         denominator = np.where(np.abs(denominator) < 1e-10, 1e-10, denominator)
         
         L = np.power(numerator / denominator, 1.0 / self.M1)
         
-        # Масштабируем обратно к исходному диапазону яркости
+        # Scale back to the original luminance range
         linear = L * self.peak_luminance
         
         return linear.astype(np.float32)

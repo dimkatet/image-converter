@@ -4,11 +4,11 @@ from .base import ImageFilter
 
 class PQEncodeFilter(ImageFilter):
     """
-    Фильтр для применения PQ (Perceptual Quantizer) гамма-кривой по стандарту ST.2084
-    Преобразует линейные HDR значения в PQ-кодированные значения
+    Filter for applying PQ (Perceptual Quantizer) gamma curve according to ST.2084
+    Converts linear HDR values to PQ-encoded values
     """
     
-    # Константы PQ по стандарту ITU-R BT.2100
+    # PQ constants according to ITU-R BT.2100
     M1 = 2610.0 / 16384.0  # 0.1593017578125
     M2 = 2523.0 / 4096.0 * 128.0  # 78.84375
     C1 = 3424.0 / 4096.0  # 0.8359375
@@ -18,8 +18,8 @@ class PQEncodeFilter(ImageFilter):
     def __init__(self, peak_luminance: float = 10000.0):
         """
         Args:
-            peak_luminance: Пиковая яркость в нитах (cd/m²)
-                           Обычно 10000 для ST.2084, но можно настроить
+            peak_luminance: Peak luminance in nits (cd/m²)
+                           Usually 10000 for ST.2084, but can be adjusted
         """
         super().__init__()
         self.peak_luminance = peak_luminance
@@ -27,21 +27,21 @@ class PQEncodeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Нормализуем к диапазону [0, 1] относительно пиковой яркости
-        # Предполагаем, что входные данные в линейном пространстве
+        # Normalize to [0, 1] relative to peak luminance
+        # Assume input data is in linear space
         normalized = pixels / self.peak_luminance
         
-        # Обрезаем отрицательные значения
+        # Clip negative values
         normalized = np.maximum(normalized, 0.0)
         
-        # Применяем PQ EOTF
+        # Apply PQ EOTF
         # Y = ((c1 + c2 * L^m1) / (1 + c3 * L^m1))^m2
         L_m1 = np.power(normalized, self.M1)
         
         numerator = self.C1 + self.C2 * L_m1
         denominator = 1.0 + self.C3 * L_m1
         
-        # Избегаем деления на ноль
+        # Avoid division by zero
         denominator = np.maximum(denominator, 1e-10)
         
         pq_encoded = np.power(numerator / denominator, self.M2)

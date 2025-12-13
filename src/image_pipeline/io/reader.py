@@ -1,5 +1,5 @@
 """
-Модуль для чтения изображений различных форматов
+Module for reading images of various formats
 """
 import numpy as np
 import imageio.v3 as iio
@@ -11,7 +11,7 @@ from image_pipeline.core.image_data import ImageData
 
 
 class ImageReader:
-    """Класс для чтения изображений различных форматов"""
+    """Class for reading images of various formats"""
     
     TIFF_FORMATS = {'.tiff', '.tif'}
     IMAGEIO_FORMATS = {
@@ -22,35 +22,35 @@ class ImageReader:
     
     def __init__(self, filepath: str):
         """
-        Инициализация читателя изображений
+        Initialize image reader
         
         Args:
-            filepath: Путь к файлу изображения
+            filepath: Path to the image file
         """
         self.filepath = Path(filepath)
         self._validate_file()
     
     def _validate_file(self) -> None:
-        """Проверка существования и формата файла"""
+        """Check file existence and format"""
         if not self.filepath.exists():
-            raise FileNotFoundError(f"Файл не найден: {self.filepath}")
+            raise FileNotFoundError(f"File not found: {self.filepath}")
         
         if not self.filepath.is_file():
-            raise ValueError(f"Путь не является файлом: {self.filepath}")
+            raise ValueError(f"Path is not a file: {self.filepath}")
         
         ext = self.filepath.suffix.lower()
         if ext not in self.SUPPORTED_FORMATS:
             raise ValueError(
-                f"Неподдерживаемый формат: {ext}. "
-                f"Поддерживаемые форматы: {', '.join(sorted(self.SUPPORTED_FORMATS))}"
+                f"Unsupported format: {ext}. "
+                f"Supported formats: {', '.join(sorted(self.SUPPORTED_FORMATS))}"
             )
     
     def read(self) -> ImageData:
         """
-        Чтение изображения из файла
+        Read image from file
         
         Returns:
-            ImageData объект с пикселями и метаданными
+            ImageData object with pixels and metadata
         """
         ext = self.filepath.suffix.lower()
         
@@ -60,7 +60,7 @@ class ImageReader:
             return self._read_imageio()
     
     def _read_tiff(self) -> ImageData:
-        """Чтение TIFF файлов через tifffile"""
+        """Read TIFF files using tifffile"""
         try:
             pixels = tifffile.imread(self.filepath)
             
@@ -87,15 +87,15 @@ class ImageReader:
             return ImageData(pixels, metadata)
             
         except Exception as e:
-            raise IOError(f"Ошибка при чтении TIFF файла: {e}")
+            raise IOError(f"Error reading TIFF file: {e}")
     
     def _read_imageio(self) -> ImageData:
-        """Чтение изображений через imageio"""
+        """Read images using imageio"""
         try:
-            # Читаем изображение
+            # Read image
             pixels = iio.imread(self.filepath)
             
-            # Получаем метаданные
+            # Get metadata
             props = iio.improps(self.filepath)
             
             metadata = {
@@ -108,7 +108,7 @@ class ImageReader:
                 'is_float': np.issubdtype(pixels.dtype, np.floating),
             }
             
-            # Добавляем свойства из imageio
+            # Add properties from imageio
             if props.shape:
                 metadata['original_shape'] = props.shape
             if props.n_images:
@@ -116,16 +116,16 @@ class ImageReader:
             if props.is_batch:
                 metadata['is_batch'] = props.is_batch
             
-            # Проверяем прозрачность
+            # Check transparency
             if len(pixels.shape) == 3:
                 channels = pixels.shape[2]
                 metadata['channels'] = channels
-                metadata['has_transparency'] = channels in (2, 4)  # LA или RGBA
+                metadata['has_transparency'] = channels in (2, 4)  # LA or RGBA
             elif len(pixels.shape) == 2:
                 metadata['channels'] = 1
                 metadata['has_transparency'] = False
             
-            # Пытаемся получить EXIF из метаданных imageio
+            # Try to get EXIF from imageio metadata
             try:
                 meta = iio.immeta(self.filepath)
                 if meta:
@@ -136,4 +136,4 @@ class ImageReader:
             return ImageData(pixels, metadata)
             
         except Exception as e:
-            raise IOError(f"Ошибка при чтении изображения через imageio: {e}")
+            raise IOError(f"Error reading image via imageio: {e}")

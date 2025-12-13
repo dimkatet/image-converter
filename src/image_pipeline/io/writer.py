@@ -1,5 +1,5 @@
 """
-Модуль для сохранения изображений в различные форматы
+Module for saving images in various formats
 """
 import numpy as np
 import imageio.v3 as iio
@@ -18,7 +18,7 @@ from image_pipeline.core.image_data import ImageData
 
 
 class ImageWriter:
-    """Класс для сохранения изображений в файл"""
+    """Class for saving images to a file"""
     
     TIFF_FORMATS = {'.tiff', '.tif'}
     HDR_FORMATS = {'.exr', '.hdr', '.pfm'}
@@ -26,7 +26,7 @@ class ImageWriter:
     UINT8_FORMATS = {'.jpg', '.jpeg', '.bmp', '.webp'}
     SUPPORTED_FORMATS = TIFF_FORMATS | HDR_FORMATS | PNG_FORMAT | UINT8_FORMATS
     
-    # Доступные методы сжатия для TIFF
+    # Available compression methods for TIFF
     TIFF_COMPRESSIONS = {
         'none': 0,
         'lzw': 5,
@@ -37,21 +37,21 @@ class ImageWriter:
     
     def __init__(self, filepath: str):
         """
-        Инициализация writer'а
+        Initialize the writer
         
         Args:
-            filepath: Путь для сохранения файла
+            filepath: Path to save the file
         """
         self.filepath = Path(filepath)
         self._validate_format()
     
     def _validate_format(self) -> None:
-        """Проверка поддерживаемости формата"""
+        """Check if the format is supported"""
         ext = self.filepath.suffix.lower()
         if ext not in self.SUPPORTED_FORMATS:
             raise ValueError(
-                f"Неподдерживаемый формат: {ext}. "
-                f"Поддерживаемые форматы: {', '.join(sorted(self.SUPPORTED_FORMATS))}"
+                f"Unsupported format: {ext}. "
+                f"Supported formats: {', '.join(sorted(self.SUPPORTED_FORMATS))}"
             )
     
     def write(self, 
@@ -61,16 +61,16 @@ class ImageWriter:
               compression_level: int = 6,
               metadata: Optional[Dict[str, Any]] = None) -> None:
         """
-        Сохранение изображения в файл
+        Save image to file
         
         Args:
-            data: ImageData объект или numpy array с пикселями
-            quality: Качество для JPEG/WebP (1-100), по умолчанию 95
-            compression: Тип сжатия для TIFF ('none', 'lzw', 'jpeg', 'deflate', 'zstd')
-            compression_level: Уровень сжатия для PNG (0-9), по умолчанию 6
-            metadata: Дополнительные метаданные для сохранения
+            data: ImageData object or numpy array with pixels
+            quality: Quality for JPEG/WebP (1-100), default 95
+            compression: Compression type for TIFF ('none', 'lzw', 'jpeg', 'deflate', 'zstd')
+            compression_level: Compression level for PNG (0-9), default 6
+            metadata: Additional metadata to save
         """
-        # Извлекаем пиксели и метаданные
+        # Extract pixels and metadata
         if hasattr(data, 'pixels'):
             pixels = data.pixels
             saved_metadata = metadata or data.metadata
@@ -78,10 +78,10 @@ class ImageWriter:
             pixels = data
             saved_metadata = metadata or {}
         
-        # Валидируем данные
+        # Validate data
         self._validate_data(pixels)
         
-        # Создаём директорию если не существует
+        # Create directory if it does not exist
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         
         ext = self.filepath.suffix.lower()
@@ -97,76 +97,76 @@ class ImageWriter:
     
     def _validate_data(self, pixels: np.ndarray) -> None:
         """
-        Валидация данных перед сохранением
+        Validate data before saving
         
         Args:
-            pixels: Массив пикселей
+            pixels: Pixel array
             
         Raises:
-            ValueError: Если данные невалидны
+            ValueError: If data is invalid
         """
         if not isinstance(pixels, np.ndarray):
-            raise ValueError("Данные должны быть numpy array")
+            raise ValueError("Data must be a numpy array")
         
         if pixels.size == 0:
-            raise ValueError("Пустой массив пикселей")
+            raise ValueError("Empty pixel array")
         
         ext = self.filepath.suffix.lower()
         
-        # PNG поддерживает uint8 и uint16
+        # PNG supports uint8 and uint16
         if ext == '.png':
             if pixels.dtype not in (np.uint8, np.uint16):
                 raise ValueError(
-                    f"PNG поддерживает только uint8 и uint16. "
-                    f"Получен: {pixels.dtype}.\n"
-                    f"Решения:\n"
-                    f"  1. Для float: используйте TIFF, EXR или HDR\n"
-                    f"  2. Для uint32: конвертируйте в uint16 или используйте TIFF"
+                    f"PNG supports only uint8 and uint16. "
+                    f"Got: {pixels.dtype}.\n"
+                    f"Solutions:\n"
+                    f"  1. For float: use TIFF, EXR or HDR\n"
+                    f"  2. For uint32: convert to uint16 or use TIFF"
                 )
         
-        # Остальные uint8 форматы
+        # Other uint8 formats
         elif ext in self.UINT8_FORMATS:
             if pixels.dtype != np.uint8:
                 raise ValueError(
-                    f"{ext.upper()} поддерживает только uint8. "
-                    f"Получен: {pixels.dtype}.\n"
-                    f"Решения:\n"
-                    f"  1. Используйте QuantizeFilter(bit_depth=8) для конвертации\n"
-                    f"  2. Для uint16: сохраняйте в PNG или TIFF\n"
-                    f"  3. Для float32: сохраняйте в TIFF, EXR или HDR"
+                    f"{ext.upper()} supports only uint8. "
+                    f"Got: {pixels.dtype}.\n"
+                    f"Solutions:\n"
+                    f"  1. Use QuantizeFilter(bit_depth=8) for conversion\n"
+                    f"  2. For uint16: save as PNG or TIFF\n"
+                    f"  3. For float32: save as TIFF, EXR or HDR"
                 )
             
-            # JPEG не поддерживает прозрачность
+            # JPEG does not support transparency
             if ext in {'.jpg', '.jpeg'}:
                 if len(pixels.shape) == 3 and pixels.shape[2] == 4:
                     raise ValueError(
-                        "JPEG не поддерживает прозрачность (RGBA). "
-                        "Используйте PNG или конвертируйте в RGB."
+                        "JPEG does not support transparency (RGBA). "
+                        "Use PNG or convert to RGB."
                     )
         
-        # HDR форматы требуют float
+        # HDR formats require float
         elif ext in self.HDR_FORMATS:
             if not np.issubdtype(pixels.dtype, np.floating):
                 raise ValueError(
-                    f"{ext.upper()} требует float данные. "
-                    f"Получен: {pixels.dtype}. "
-                    f"Конвертируйте в float32 перед сохранением."
+                    f"{ext.upper()} requires float data. "
+                    f"Got: {pixels.dtype}. "
+                    f"Convert to float32 before saving."
                 )
         
-        # Проверка диапазона для integer типов
+        # Check range for integer types
         if np.issubdtype(pixels.dtype, np.integer):
             pix_min = pixels.min()
             pix_max = pixels.max()
             
             if pix_min < 0:
                 raise ValueError(
-                    f"Отрицательные значения пикселей ({pix_min}) недопустимы"
+                    f"Negative pixel values ({pix_min}) are not allowed"
                 )
             
             dtype_max = np.iinfo(pixels.dtype).max
             if pix_max > dtype_max:
                 raise ValueError(
-                    f"Значения пикселей ({pix_max}) превышают максимум для {pixels.dtype} ({dtype_max})"
+                    f"Pixel values ({pix_max}) exceed maximum for {pixels.dtype} ({dtype_max})"
                 )
     
     def _write_tiff(self, 
@@ -174,13 +174,13 @@ class ImageWriter:
                     compression: str,
                     metadata: Dict[str, Any]) -> None:
         """
-        Сохранение в TIFF через tifffile
-        Поддерживает: uint8, uint16, uint32, float32, float64
+        Save as TIFF using tifffile
+        Supports: uint8, uint16, uint32, float32, float64
         """
         try:
             if compression not in self.TIFF_COMPRESSIONS:
                 warnings.warn(
-                    f"Сжатие '{compression}' не поддерживается, используется 'lzw'",
+                    f"Compression '{compression}' is not supported, using 'lzw'",
                     UserWarning
                 )
                 compression = 'lzw'
@@ -197,38 +197,38 @@ class ImageWriter:
             )
             
         except Exception as e:
-            raise IOError(f"Ошибка при сохранении TIFF: {e}")
+            raise IOError(f"Error saving TIFF: {e}")
     
     def _write_png(self,
                    pixels: np.ndarray,
                    compression_level: int,
                    metadata: Dict[str, Any]) -> None:
         """
-        Сохранение PNG с поддержкой uint16
-        Использует pypng для uint16, imageio для uint8
+        Save PNG with uint16 support
+        Uses pypng for uint16, imageio for uint8
         """
         try:
-            # uint8 - используем imageio (быстрее)
+            # uint8 - use imageio (faster)
             if pixels.dtype == np.uint8:
                 self._write_png_imageio(pixels, compression_level)
             
-            # uint16 - используем pypng (единственная либа с нормальной поддержкой)
+            # uint16 - use pypng (the only library with proper support)
             elif pixels.dtype == np.uint16:
                 if not HAS_PYPNG:
                     raise ImportError(
-                        "Для сохранения uint16 PNG требуется библиотека pypng.\n"
-                        "Установите: pip install pypng"
+                        "Saving uint16 PNG requires the pypng library.\n"
+                        "Install: pip install pypng"
                     )
                 self._write_png_pypng(pixels)
             
             else:
-                raise ValueError(f"PNG не поддерживает тип {pixels.dtype}")
+                raise ValueError(f"PNG does not support type {pixels.dtype}")
                 
         except Exception as e:
-            raise IOError(f"Ошибка при сохранении PNG: {e}")
+            raise IOError(f"Error saving PNG: {e}")
     
     def _write_png_imageio(self, pixels: np.ndarray, compression_level: int) -> None:
-        """Сохранение uint8 PNG через imageio"""
+        """Save uint8 PNG using imageio"""
         iio.imwrite(
             self.filepath,
             pixels,
@@ -237,23 +237,23 @@ class ImageWriter:
         )
     
     def _write_png_pypng(self, pixels: np.ndarray) -> None:
-        """Сохранение uint16 PNG через pypng"""
+        """Save uint16 PNG using pypng"""
         height, width = pixels.shape[:2]
         
-        # Определяем тип изображения
+        # Determine image type
         if len(pixels.shape) == 2:
             # Grayscale
             greyscale = True
             alpha = False
             planes = 1
-            # pypng требует 2D массив для grayscale
+            # pypng requires 2D array for grayscale
             img_data = pixels
         
         elif len(pixels.shape) == 3:
             channels = pixels.shape[2]
             
             if channels == 1:
-                # Grayscale с одним каналом
+                # Grayscale with one channel
                 greyscale = True
                 alpha = False
                 planes = 1
@@ -264,7 +264,7 @@ class ImageWriter:
                 greyscale = True
                 alpha = True
                 planes = 2
-                # Преобразуем в 2D массив строк
+                # Convert to 2D array of rows
                 img_data = pixels.reshape(height, width * 2)
             
             elif channels == 3:
@@ -272,7 +272,7 @@ class ImageWriter:
                 greyscale = False
                 alpha = False
                 planes = 3
-                # Преобразуем в 2D массив строк
+                # Convert to 2D array of rows
                 img_data = pixels.reshape(height, width * 3)
             
             elif channels == 4:
@@ -280,30 +280,30 @@ class ImageWriter:
                 greyscale = False
                 alpha = True
                 planes = 4
-                # Преобразуем в 2D массив строк
+                # Convert to 2D array of rows
                 img_data = pixels.reshape(height, width * 4)
             
             else:
-                raise ValueError(f"Неподдерживаемое количество каналов: {channels}")
+                raise ValueError(f"Unsupported number of channels: {channels}")
         
         else:
-            raise ValueError(f"Неподдерживаемая форма массива: {pixels.shape}")
+            raise ValueError(f"Unsupported array shape: {pixels.shape}")
         
-        # Создаём PNG writer
+        # Create PNG writer
         writer = pypng.Writer(
             width=width,
             height=height,
             greyscale=greyscale,
             alpha=alpha,
             bitdepth=16,  # uint16 = 16 bit
-            compression=9  # максимальное сжатие
+            compression=9  # maximum compression
         )
         
-        # Сохраняем
+        # Save
         with open(self.filepath, 'wb') as f:
-            # pypng требует список строк (каждая строка - 1D массив)
+            # pypng requires a list of rows (each row is a 1D array)
             if len(img_data.shape) == 2 and planes > 1:
-                # Уже в формате (height, width*channels)
+                # Already in (height, width*channels) format
                 writer.write(f, img_data)
             else:
                 # Grayscale 2D
@@ -313,28 +313,28 @@ class ImageWriter:
                    pixels: np.ndarray,
                    metadata: Dict[str, Any]) -> None:
         """
-        Сохранение HDR форматов через imageio
-        Поддерживает: float32, float64
+        Save HDR formats using imageio
+        Supports: float32, float64
         """
         try:
             kwargs = {}
             
-            # Для EXR можно указать компрессию
+            # For EXR you can specify compression
             if self.filepath.suffix.lower() == '.exr':
                 kwargs['compression'] = 'ZIP_COMPRESSION'
             
             iio.imwrite(self.filepath, pixels, **kwargs)
             
         except Exception as e:
-            raise IOError(f"Ошибка при сохранении HDR формата: {e}")
+            raise IOError(f"Error saving HDR format: {e}")
     
     def _write_uint8(self, 
                      pixels: np.ndarray,
                      quality: int,
                      metadata: Dict[str, Any]) -> None:
         """
-        Сохранение uint8 форматов через imageio
-        Поддерживает: только uint8
+        Save uint8 formats using imageio
+        Supports: only uint8
         """
         try:
             ext = self.filepath.suffix.lower()
@@ -351,4 +351,4 @@ class ImageWriter:
             iio.imwrite(self.filepath, pixels, **kwargs)
             
         except Exception as e:
-            raise IOError(f"Ошибка при сохранении {ext.upper()}: {e}")
+            raise IOError(f"Error saving {ext.upper()}: {e}")

@@ -5,45 +5,45 @@ import numpy as np
 
 
 class ImageFilter(ABC):
-    """Базовый абстрактный класс для всех фильтров"""
+    """Base abstract class for all filters"""
     
     def __init__(self, name: Optional[str] = None):
         """
-        Инициализация фильтра
+        Filter initialization
         
         Args:
-            name: Название фильтра (опционально)
+            name: Filter name (optional)
         """
         self.name = name or self.__class__.__name__
     
     @abstractmethod
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         """
-        Применение фильтра к массиву пикселей
+        Apply the filter to a pixel array
         
         Args:
-            pixels: Входной массив пикселей
+            pixels: Input pixel array
             
         Returns:
-            Обработанный массив пикселей
+            Processed pixel array
         """
         pass
     
     def validate(self, pixels: np.ndarray) -> None:
         """
-        Валидация входных данных
+        Validate input data
         
         Args:
-            pixels: Массив пикселей для проверки
+            pixels: Pixel array to check
             
         Raises:
-            ValueError: Если данные невалидны
+            ValueError: If data is invalid
         """
         if not isinstance(pixels, np.ndarray):
-            raise ValueError(f"{self.name}: входные данные должны быть numpy array")
+            raise ValueError(f"{self.name}: input data must be a numpy array")
         
         if pixels.size == 0:
-            raise ValueError(f"{self.name}: пустой массив пикселей")
+            raise ValueError(f"{self.name}: empty pixel array")
     
     def __repr__(self) -> str:
         return f"{self.name}()"

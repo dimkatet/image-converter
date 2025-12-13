@@ -15,17 +15,17 @@ def process_image(input_path: str,
                  save_options: Optional[dict] = None,
                  verbose: bool = False) -> 'ImageData':
     """
-    Обработка изображения: чтение -> применение фильтров -> сохранение
+    Image processing: read -> apply filters -> save
     
     Args:
-        input_path: Путь к входному файлу
-        output_path: Путь для сохранения результата
-        filters: Список фильтров или FilterPipeline для применения
-        save_options: Параметры сохранения (quality, compression и т.д.)
-        verbose: Выводить детальную информацию о процессе
+        input_path: Path to the input file
+        output_path: Path to save the result
+        filters: List of filters or FilterPipeline to apply
+        save_options: Save parameters (quality, compression, etc.)
+        verbose: Print detailed process information
         
     Returns:
-        ImageData с обработанным изображением
+        ImageData with the processed image
         
     Example:
         >>> from image_filters import GrayscaleFilter, BlurFilter
@@ -35,50 +35,50 @@ def process_image(input_path: str,
     save_options = save_options or {}
     
     try:
-        # 1. Чтение изображения
+        # 1. Read image
         if verbose:
-            print(f"Чтение файла: {input_path}")
+            print(f"Reading file: {input_path}")
         
         reader = ImageReader(input_path)
         img_data = reader.read()
         
         if verbose:
-            print(f"  Загружено: {img_data.shape}, {img_data.dtype}")
-            print(f"  Формат: {img_data.format}")
+            print(f"  Loaded: {img_data.shape}, {img_data.dtype}")
+            print(f"  Format: {img_data.format}")
         
-        # 2. Применение фильтров
+        # 2. Apply filters
         if verbose:
-            print(f"\nПрименение фильтров...")
+            print(f"\nApplying filters...")
         
-        # Если передан список фильтров, создаём pipeline
+        # If a list of filters is passed, create a pipeline
         if isinstance(filters, list):
             pipeline = FilterPipeline(filters)
         else:
             pipeline = filters
         
-        # Применяем фильтры
+        # Apply filters
         processed_pixels = pipeline.apply(img_data.pixels, verbose=verbose)
         
-        # Создаём новый ImageData с обработанными пикселями
+        # Create new ImageData with processed pixels
         processed_data = ImageData(processed_pixels, img_data.metadata.copy())
         
-        # 3. Сохранение результата
+        # 3. Save result
         if verbose:
-            print(f"\nСохранение в: {output_path}")
+            print(f"\nSaving to: {output_path}")
         
         ImageSaver.save_with_format_conversion(processed_data, output_path, **save_options)
         
         if verbose:
-            print(f"  Успешно сохранено!")
+            print(f"  Successfully saved!")
             output_size = Path(output_path).stat().st_size / 1024  # KB
-            print(f"  Размер файла: {output_size:.2f} KB")
+            print(f"  File size: {output_size:.2f} KB")
         
         return processed_data
         
     except FileNotFoundError as e:
-        raise FileNotFoundError(f"Входной файл не найден: {input_path}") from e
+        raise FileNotFoundError(f"Input file not found: {input_path}") from e
     except Exception as e:
-        raise RuntimeError(f"Ошибка при обработке изображения: {e}") from e
+        raise RuntimeError(f"Error processing image: {e}") from e
 
 
 
