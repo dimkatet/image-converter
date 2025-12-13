@@ -1,4 +1,6 @@
 import numpy as np
+
+from image_pipeline.core.image_data import ImageData
 from .base import ImageFilter
 
 
@@ -19,6 +21,11 @@ class RemoveAlphaFilter(ImageFilter):
         rgb = pixels[..., :3]
 
         return rgb.astype(pixels.dtype)
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['has_alpha'] = False
+        img_data.metadata['color_mode'] = 'RGB'
 
     def __repr__(self) -> str:
         return "RemoveAlphaFilter()"

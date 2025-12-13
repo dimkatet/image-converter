@@ -57,11 +57,8 @@ def process_image(input_path: str,
             pipeline = filters
         
         # Apply filters
-        processed_pixels = pipeline.apply(img_data.pixels, verbose=verbose)
-        
-        # Create new ImageData with processed pixels
-        processed_data = ImageData(processed_pixels, img_data.metadata.copy())
-        
+        processed_data = pipeline.apply(img_data, verbose=verbose)
+                
         # 3. Save result
         if verbose:
             print(f"\nSaving to: {output_path}")

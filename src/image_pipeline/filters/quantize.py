@@ -1,3 +1,5 @@
+from image_pipeline.core.image_data import ImageData
+
 import numpy as np
 from .base import ImageFilter
 
@@ -46,6 +48,12 @@ class QuantizeFilter(ImageFilter):
         result = np.round(quantized).astype(self.target_dtype)
         
         return result
+
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['quantized'] = True
+        img_data.metadata['bit_depth'] = self.bit_depth
+        img_data.metadata['dtype'] = str(self.target_dtype)
     
     def __repr__(self) -> str:
         return f"QuantizeFilter(bit_depth={self.bit_depth})"

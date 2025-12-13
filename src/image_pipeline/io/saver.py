@@ -8,7 +8,7 @@ class ImageSaver:
     """Helper class for batch save operations"""
     
     @staticmethod
-    def save_with_format_conversion(data: Union['ImageData', np.ndarray],
+    def save_with_format_conversion(data: ImageData,
                                     output_path: str,
                                     target_dtype: Optional[np.dtype] = None,
                                     **save_options) -> None:
@@ -16,18 +16,14 @@ class ImageSaver:
         Save with data type conversion
         
         Args:
-            data: ImageData or numpy array
+            data: ImageData
             output_path: Path to save
             target_dtype: Target data type (uint8, uint16, float32, etc.)
             **save_options: Additional save options
         """
         # Extract pixels
-        if hasattr(data, 'pixels'):
-            pixels = data.pixels
-            metadata = data.metadata
-        else:
-            pixels = data
-            metadata = {}
+        pixels = data.pixels
+        metadata = data.metadata
         
         # Convert data type if needed
         if target_dtype and pixels.dtype != target_dtype:
@@ -35,7 +31,7 @@ class ImageSaver:
         
         # Save
         writer = ImageWriter(output_path)
-        writer.write(pixels, metadata=metadata, **save_options)
+        writer.write(data, metadata=metadata, **save_options)
     
     @staticmethod
     def _convert_dtype(pixels: np.ndarray, target_dtype: np.dtype) -> np.ndarray:

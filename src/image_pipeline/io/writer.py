@@ -7,12 +7,8 @@ import tifffile
 from pathlib import Path
 from typing import Optional, Union, Dict, Any
 import warnings
+import png as pypng
 
-try:
-    import png as pypng
-    HAS_PYPNG = True
-except ImportError:
-    HAS_PYPNG = False
 
 from image_pipeline.core.image_data import ImageData
 
@@ -55,7 +51,7 @@ class ImageWriter:
             )
     
     def write(self, 
-              data: Union['ImageData', np.ndarray],
+              data: ImageData,
               quality: int = 95,
               compression: str = 'lzw',
               compression_level: int = 6,
@@ -64,19 +60,15 @@ class ImageWriter:
         Save image to file
         
         Args:
-            data: ImageData object or numpy array with pixels
+            data: ImageData object
             quality: Quality for JPEG/WebP (1-100), default 95
             compression: Compression type for TIFF ('none', 'lzw', 'jpeg', 'deflate', 'zstd')
             compression_level: Compression level for PNG (0-9), default 6
             metadata: Additional metadata to save
         """
         # Extract pixels and metadata
-        if hasattr(data, 'pixels'):
-            pixels = data.pixels
-            saved_metadata = metadata or data.metadata
-        else:
-            pixels = data
-            saved_metadata = metadata or {}
+        pixels = data.pixels
+        saved_metadata = metadata or data.metadata
         
         # Validate data
         self._validate_data(pixels)
@@ -214,11 +206,6 @@ class ImageWriter:
             
             # uint16 - use pypng (the only library with proper support)
             elif pixels.dtype == np.uint16:
-                if not HAS_PYPNG:
-                    raise ImportError(
-                        "Saving uint16 PNG requires the pypng library.\n"
-                        "Install: pip install pypng"
-                    )
                 self._write_png_pypng(pixels)
             
             else:

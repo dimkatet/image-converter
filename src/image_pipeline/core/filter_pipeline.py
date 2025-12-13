@@ -2,6 +2,7 @@ from typing import List
 from typing import Optional
 import numpy as np
 
+from image_pipeline.core.image_data import ImageData
 from image_pipeline.filters.base import ImageFilter
 
 
@@ -47,28 +48,23 @@ class FilterPipeline:
         self.filters.clear()
         return self
     
-    def apply(self, pixels: np.ndarray, verbose: bool = False) -> np.ndarray:
+    def apply(self, img_data: ImageData, verbose: bool = False) -> ImageData:
         """
         Apply all filters sequentially
         
         Args:
-            pixels: Input pixel array
+            img_data: Input ImageData object
             verbose: Print information about each step
             
         Returns:
             Processed pixel array
         """
-        result = pixels.copy()
+        result = img_data.copy()
         
         for i, filter in enumerate(self.filters):
             if verbose:
-                print(f"Step {i+1}/{len(self.filters)}: Applying {filter}")
-            
-            result = filter.apply(result)
-            
-            if verbose:
-                print(f"  Shape: {result.shape}, Dtype: {result.dtype}, "
-                      f"Range: [{result.min():.3f}, {result.max():.3f}]")
+                print(f"Step {i+1}/{len(self.filters)}: {filter}")
+            result = filter(result)
         
         return result
     

@@ -1,3 +1,5 @@
+from image_pipeline.core.image_data import ImageData
+
 import numpy as np
 from scipy.ndimage import convolve
 from .base import ImageFilter
@@ -34,6 +36,10 @@ class SharpenFilter(ImageFilter):
             for i in range(pixels.shape[-1]):
                 result[..., i] = convolve(pixels[..., i], kernel, mode='reflect')
             return result
+        
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['filter_sharpen'] = {'strength': self.strength}
     
     def __repr__(self) -> str:
         return f"SharpenFilter(strength={self.strength})"

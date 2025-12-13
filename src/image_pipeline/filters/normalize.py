@@ -1,3 +1,5 @@
+from image_pipeline.core.image_data import ImageData
+
 import numpy as np
 from .base import ImageFilter
 
@@ -29,6 +31,11 @@ class NormalizeFilter(ImageFilter):
         result = normalized * (self.max_val - self.min_val) + self.min_val
         
         return result.astype(np.float32)
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['normalized'] = True
+        img_data.metadata['normalize_range'] = (self.min_val, self.max_val)
     
     def __repr__(self) -> str:
         return f"NormalizeFilter(min={self.min_val}, max={self.max_val})"

@@ -1,3 +1,5 @@
+from image_pipeline.core.image_data import ImageData
+
 import numpy as np
 from .base import ImageFilter
 
@@ -41,6 +43,12 @@ class PQDecodeFilter(ImageFilter):
         linear = L * self.peak_luminance
         
         return linear.astype(np.float32)
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['transfer_function'] = 'Linear (PQ Decoded)'
+        img_data.metadata['peak_luminance_nits'] = self.peak_luminance
+        img_data.metadata['is_hdr'] = True
     
     def __repr__(self) -> str:
         return f"PQDecodeFilter(peak_luminance={self.peak_luminance})"

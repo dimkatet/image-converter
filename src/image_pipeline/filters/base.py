@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
+
+from image_pipeline.core.image_data import ImageData
 
 
 class ImageFilter(ABC):
@@ -16,6 +18,13 @@ class ImageFilter(ABC):
         """
         self.name = name or self.__class__.__name__
     
+    def __call__(self, img_data: ImageData) -> ImageData:
+        """Apply the filter"""
+        result = img_data.copy()
+        result.pixels = self.apply(result.pixels)
+        self.update_metadata(result)
+        return result
+    
     @abstractmethod
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         """
@@ -28,6 +37,18 @@ class ImageFilter(ABC):
             Processed pixel array
         """
         pass
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        """
+        Update metadata after processing
+        
+        Args:
+            img_data: ImageData object to update
+        
+        Returns:     
+            None
+        """
+        img_data._sync_metadata()
     
     def validate(self, pixels: np.ndarray) -> None:
         """

@@ -1,3 +1,4 @@
+from image_pipeline.core.image_data import ImageData
 from typing import Optional
 
 import numpy as np
@@ -41,6 +42,11 @@ class DequantizeFilter(ImageFilter):
         normalized = pixels.astype(np.float32) / max_value
         
         return normalized
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['dequantized'] = True
+        img_data.metadata['bit_depth'] = self.bit_depth
     
     def __repr__(self) -> str:
         return f"DequantizeFilter(bit_depth={self.bit_depth})"

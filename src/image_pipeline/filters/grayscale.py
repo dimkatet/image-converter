@@ -1,3 +1,5 @@
+from image_pipeline.core.image_data import ImageData
+
 import numpy as np
 from .base import ImageFilter
 
@@ -41,6 +43,11 @@ class GrayscaleFilter(ImageFilter):
             return gray.astype(pixels.dtype)
         
         return pixels
+    
+    def update_metadata(self, img_data: ImageData) -> None:
+        super().update_metadata(img_data)
+        img_data.metadata['color_mode'] = 'grayscale'
+        img_data.metadata['grayscale_method'] = self.method
     
     def __repr__(self) -> str:
         return f"GrayscaleFilter(method='{self.method}')"
