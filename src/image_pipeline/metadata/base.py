@@ -1,5 +1,5 @@
 """
-Базовый класс для метаданных и примеры использования
+Base class for metadata and usage examples
 """
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 class MetadataCodec(ABC):
-    """Базовый класс для кодеков метаданных"""
+    """Base class for metadata codecs"""
     
     def __init__(self, filepath: Optional[str] = None):
         self.filepath = Path(filepath) if filepath else None
@@ -15,13 +15,13 @@ class MetadataCodec(ABC):
     @abstractmethod
     def read_metadata(self, filepath: Optional[str] = None) -> Dict[str, Any]:
         """
-        Чтение метаданных из файла
+        Read metadata from file
         
         Args:
-            filepath: Путь к файлу
+            filepath: Path to file
             
         Returns:
-            Словарь с метаданными
+            Dictionary with metadata
         """
         pass
     
@@ -29,12 +29,12 @@ class MetadataCodec(ABC):
     def write_metadata(self, metadata: Dict[str, Any], 
                       source: str, destination: str) -> None:
         """
-        Запись метаданных в файл
+        Write metadata to file
         
         Args:
-            metadata: Метаданные для записи
-            source: Исходный файл
-            destination: Файл назначения
+            metadata: Metadata to write
+            source: Source file
+            destination: Destination file
         """
         pass
     
@@ -42,10 +42,10 @@ class MetadataCodec(ABC):
     def update_metadata(self, filepath: str, 
                        metadata: Dict[str, Any]) -> None:
         """
-        Обновление метаданных в существующем файле
+        Update metadata in an existing file
         
         Args:
-            filepath: Путь к файлу
-            metadata: Метаданные для обновления
+            filepath: Path to file
+            metadata: Metadata to update
         """
         pass

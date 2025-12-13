@@ -1,6 +1,6 @@
 """
-PNG Metadata Codec - для чтения и записи PNG chunks
-Поддерживает текстовые chunks (tEXt, zTXt, iTXt) и другие метаданные
+PNG Metadata Codec - for reading and writing PNG chunks
+Supports text chunks (tEXt, zTXt, iTXt) and other metadata
 """
 import struct
 import zlib
@@ -11,21 +11,21 @@ from enum import Enum
 
 
 class ChunkType(Enum):
-    """Типы PNG chunks для метаданных"""
-    TEXT = b'tEXt'      # Простой текст (Latin-1)
-    ZTXT = b'zTXt'      # Сжатый текст
-    ITXT = b'iTXt'      # Международный текст (UTF-8)
-    TIME = b'tIME'      # Время последнего изменения
-    PHYS = b'pHYs'      # Физические размеры пикселя
-    GAMA = b'gAMA'      # Гамма
-    CHRM = b'cHRM'      # Хроматические координаты
-    SRGB = b'sRGB'      # sRGB цветовое пространство
-    ICCP = b'iCCP'      # ICC профиль
+    """PNG chunk types for metadata"""
+    TEXT = b'tEXt'      # Plain text (Latin-1)
+    ZTXT = b'zTXt'      # Compressed text
+    ITXT = b'iTXt'      # International text (UTF-8)
+    TIME = b'tIME'      # Last modification time
+    PHYS = b'pHYs'      # Physical pixel dimensions
+    GAMA = b'gAMA'      # Gamma
+    CHRM = b'cHRM'      # Chromaticity coordinates
+    SRGB = b'sRGB'      # sRGB color space
+    ICCP = b'iCCP'      # ICC profile
 
 
 @dataclass
 class PNGChunk:
-    """Представление PNG chunk"""
+    """PNG chunk representation"""
     chunk_type: bytes
     data: bytes
     
@@ -35,30 +35,30 @@ class PNGChunk:
 
 
 class PNGMetadataCodec:
-    """Кодек для работы с PNG метаданными через chunks"""
+    """Codec for working with PNG metadata via chunks"""
     
     PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
     
-    # Критичные chunks, которые нельзя удалять
+    # Critical chunks that must not be removed
     CRITICAL_CHUNKS = {b'IHDR', b'PLTE', b'IDAT', b'IEND'}
     
     def __init__(self, filepath: Optional[str] = None):
         """
         Args:
-            filepath: Путь к PNG файлу (опционально)
+            filepath: Path to PNG file (optional)
         """
         self.filepath = Path(filepath) if filepath else None
         self._chunks: List[PNGChunk] = []
     
     def read_chunks(self, filepath: Optional[str] = None) -> List[PNGChunk]:
         """
-        Чтение всех chunks из PNG файла
+        Read all chunks from a PNG file
         
         Args:
-            filepath: Путь к файлу (или используется self.filepath)
+            filepath: Path to file (or uses self.filepath)
             
         Returns:
-            Список PNGChunk объектов
+            List of PNGChunk objects
         """
         path = Path(filepath) if filepath else self.filepath
         if not path:
@@ -67,49 +67,49 @@ class PNGMetadataCodec:
         self._chunks = []
         
         with open(path, 'rb') as f:
-            # Проверка PNG сигнатуры
+            # Check PNG signature
             signature = f.read(8)
             if signature != self.PNG_SIGNATURE:
                 raise ValueError(f"Not a valid PNG file: {path}")
             
-            # Чтение chunks
+            # Read chunks
             while True:
                 chunk = self._read_chunk(f)
                 if chunk is None:
                     break
                 self._chunks.append(chunk)
                 
-                # IEND - конец файла
+                # IEND - end of file
                 if chunk.chunk_type == b'IEND':
                     break
         
         return self._chunks
     
     def _read_chunk(self, f) -> Optional[PNGChunk]:
-        """Чтение одного chunk из файла"""
-        # Длина данных (4 байта)
+        """Read a single chunk from file"""
+        # Data length (4 bytes)
         length_bytes = f.read(4)
         if len(length_bytes) < 4:
             return None
         
         length = struct.unpack('>I', length_bytes)[0]
         
-        # Тип chunk (4 байта)
+        # Chunk type (4 bytes)
         chunk_type = f.read(4)
         if len(chunk_type) < 4:
             return None
         
-        # Данные chunk
+        # Chunk data
         data = f.read(length)
         if len(data) < length:
             return None
         
-        # CRC (4 байта) - пропускаем, но проверяем
+        # CRC (4 bytes) - skip, but check
         crc = f.read(4)
         if len(crc) < 4:
             return None
         
-        # Проверка CRC
+        # Check CRC
         expected_crc = struct.unpack('>I', crc)[0]
         calculated_crc = zlib.crc32(chunk_type + data) & 0xffffffff
         if expected_crc != calculated_crc:
@@ -119,11 +119,11 @@ class PNGMetadataCodec:
     
     def write_chunks(self, filepath: str, chunks: Optional[List[PNGChunk]] = None) -> None:
         """
-        Запись chunks в PNG файл
+        Write chunks to a PNG file
         
         Args:
-            filepath: Путь для сохранения
-            chunks: Список chunks (или используется self._chunks)
+            filepath: Path to save
+            chunks: List of chunks (or uses self._chunks)
         """
         chunks_to_write = chunks if chunks is not None else self._chunks
         
@@ -131,22 +131,22 @@ class PNGMetadataCodec:
             raise ValueError("No chunks to write")
         
         with open(filepath, 'wb') as f:
-            # PNG сигнатура
+            # PNG signature
             f.write(self.PNG_SIGNATURE)
             
-            # Запись всех chunks
+            # Write all chunks
             for chunk in chunks_to_write:
                 self._write_chunk(f, chunk)
     
     def _write_chunk(self, f, chunk: PNGChunk) -> None:
-        """Запись одного chunk в файл"""
-        # Длина данных
+        """Write a single chunk to file"""
+        # Data length
         f.write(struct.pack('>I', len(chunk.data)))
         
-        # Тип chunk
+        # Chunk type
         f.write(chunk.chunk_type)
         
-        # Данные
+        # Data
         f.write(chunk.data)
         
         # CRC
@@ -155,10 +155,10 @@ class PNGMetadataCodec:
     
     def get_metadata(self) -> Dict[str, Any]:
         """
-        Извлечение метаданных из chunks в удобный формат
+        Extract metadata from chunks in a convenient format
         
         Returns:
-            Словарь с метаданными
+            Dictionary with metadata
         """
         metadata = {}
         
@@ -188,22 +188,22 @@ class PNGMetadataCodec:
     
     def set_metadata(self, metadata: Dict[str, str], compress: bool = False) -> None:
         """
-        Установка текстовых метаданных (добавление tEXt/zTXt chunks)
+        Set text metadata (add tEXt/zTXt chunks)
         
         Args:
-            metadata: Словарь ключ-значение для метаданных
-            compress: Использовать сжатие (zTXt вместо tEXt)
+            metadata: Dictionary of key-value metadata
+            compress: Use compression (zTXt instead of tEXt)
         """
-        # Удаляем существующие текстовые chunks
+        # Remove existing text chunks
         self._chunks = [
             c for c in self._chunks 
             if c.chunk_type not in {ChunkType.TEXT.value, ChunkType.ZTXT.value, ChunkType.ITXT.value}
         ]
         
-        # Находим позицию для вставки (после IHDR, до IDAT)
+        # Find position to insert (after IHDR, before IDAT)
         insert_pos = self._find_metadata_insert_position()
         
-        # Создаём новые chunks
+        # Create new chunks
         for key, value in metadata.items():
             if compress:
                 chunk = self._create_ztxt_chunk(key, value)
@@ -214,14 +214,14 @@ class PNGMetadataCodec:
             insert_pos += 1
     
     def _find_metadata_insert_position(self) -> int:
-        """Находит позицию для вставки метаданных (после IHDR)"""
+        """Finds position to insert metadata (after IHDR)"""
         for i, chunk in enumerate(self._chunks):
             if chunk.chunk_type == b'IHDR':
                 return i + 1
         return 0
     
     def _parse_text_chunk(self, data: bytes) -> Tuple[str, str]:
-        """Парсинг tEXt chunk"""
+        """Parse tEXt chunk"""
         null_pos = data.find(b'\x00')
         if null_pos == -1:
             return "", ""
@@ -231,13 +231,13 @@ class PNGMetadataCodec:
         return keyword, text
     
     def _parse_ztxt_chunk(self, data: bytes) -> Tuple[str, str]:
-        """Парсинг zTXt chunk (сжатый текст)"""
+        """Parse zTXt chunk (compressed text)"""
         null_pos = data.find(b'\x00')
         if null_pos == -1:
             return "", ""
         
         keyword = data[:null_pos].decode('latin-1')
-        compression_method = data[null_pos + 1]  # Должен быть 0 (deflate)
+        compression_method = data[null_pos + 1]  # Should be 0 (deflate)
         
         if compression_method != 0:
             return keyword, ""
@@ -251,18 +251,18 @@ class PNGMetadataCodec:
             return keyword, ""
     
     def _parse_itxt_chunk(self, data: bytes) -> Tuple[str, str]:
-        """Парсинг iTXt chunk (международный текст, UTF-8)"""
+        """Parse iTXt chunk (international text, UTF-8)"""
         null_pos = data.find(b'\x00')
         if null_pos == -1:
             return "", ""
         
         keyword = data[:null_pos].decode('latin-1')
         
-        # Пропускаем compression flag и method
+        # Skip compression flag and method
         compression_flag = data[null_pos + 1]
         compression_method = data[null_pos + 2]
         
-        # Находим language tag и translated keyword (оба null-terminated)
+        # Find language tag and translated keyword (both null-terminated)
         rest = data[null_pos + 3:]
         lang_null = rest.find(b'\x00')
         if lang_null == -1:
@@ -275,7 +275,7 @@ class PNGMetadataCodec:
         
         text_data = rest[trans_null + 1:]
         
-        # Декомпрессия если нужно
+        # Decompress if needed
         if compression_flag == 1:
             try:
                 text_data = zlib.decompress(text_data)
@@ -286,7 +286,7 @@ class PNGMetadataCodec:
         return keyword, text
     
     def _parse_time_chunk(self, data: bytes) -> Dict[str, int]:
-        """Парсинг tIME chunk"""
+        """Parse tIME chunk"""
         if len(data) < 7:
             return {}
         
@@ -303,7 +303,7 @@ class PNGMetadataCodec:
         }
     
     def _parse_phys_chunk(self, data: bytes) -> Dict[str, int]:
-        """Парсинг pHYs chunk"""
+        """Parse pHYs chunk"""
         if len(data) < 9:
             return {}
         
@@ -318,7 +318,7 @@ class PNGMetadataCodec:
         }
     
     def _parse_gama_chunk(self, data: bytes) -> float:
-        """Парсинг gAMA chunk"""
+        """Parse gAMA chunk"""
         if len(data) < 4:
             return 0.0
         
@@ -326,7 +326,7 @@ class PNGMetadataCodec:
         return gamma_int / 100000.0
     
     def _create_text_chunk(self, keyword: str, text: str) -> PNGChunk:
-        """Создание tEXt chunk"""
+        """Create tEXt chunk"""
         keyword_bytes = keyword.encode('latin-1')[:79]  # Max 79 bytes
         text_bytes = text.encode('latin-1', errors='replace')
         
@@ -334,7 +334,7 @@ class PNGMetadataCodec:
         return PNGChunk(chunk_type=ChunkType.TEXT.value, data=data)
     
     def _create_ztxt_chunk(self, keyword: str, text: str) -> PNGChunk:
-        """Создание zTXt chunk (сжатый)"""
+        """Create zTXt chunk (compressed)"""
         keyword_bytes = keyword.encode('latin-1')[:79]
         text_bytes = text.encode('latin-1', errors='replace')
         compressed = zlib.compress(text_bytes, level=9)
@@ -345,24 +345,24 @@ class PNGMetadataCodec:
     def copy_image_with_metadata(self, source: str, destination: str, 
                                  metadata: Dict[str, str]) -> None:
         """
-        Копирование PNG с добавлением/изменением метаданных
+        Copy PNG with adding/updating metadata
         
         Args:
-            source: Исходный PNG файл
-            destination: Файл назначения
-            metadata: Метаданные для добавления
+            source: Source PNG file
+            destination: Destination file
+            metadata: Metadata to add
         """
-        # Читаем chunks из исходного файла
+        # Read chunks from source file
         self.read_chunks(source)
         
-        # Устанавливаем новые метаданные
+        # Set new metadata
         self.set_metadata(metadata)
         
-        # Сохраняем
+        # Save
         self.write_chunks(destination)
     
     def list_chunks(self) -> None:
-        """Вывод списка всех chunks для отладки"""
+        """Print list of all chunks for debugging"""
         print(f"Total chunks: {len(self._chunks)}")
         for i, chunk in enumerate(self._chunks):
             type_str = chunk.chunk_type.decode('latin-1', errors='ignore')
