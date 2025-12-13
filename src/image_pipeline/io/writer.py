@@ -11,6 +11,7 @@ import png as pypng
 
 
 from image_pipeline.core.image_data import ImageData
+from image_pipeline.types import ImageMetadata
 
 
 class ImageWriter:
@@ -55,7 +56,7 @@ class ImageWriter:
               quality: int = 95,
               compression: str = 'lzw',
               compression_level: int = 6,
-              metadata: Optional[Dict[str, Any]] = None) -> None:
+              metadata: Optional[ImageMetadata] = None) -> None:
         """
         Save image to file
         
@@ -79,13 +80,13 @@ class ImageWriter:
         ext = self.filepath.suffix.lower()
         
         if ext in self.TIFF_FORMATS:
-            self._write_tiff(pixels, compression, saved_metadata)
+            self._write_tiff(pixels, compression)
         elif ext in self.PNG_FORMAT:
-            self._write_png(pixels, compression_level, saved_metadata)
+            self._write_png(pixels, compression_level)
         elif ext in self.HDR_FORMATS:
-            self._write_hdr(pixels, saved_metadata)
+            self._write_hdr(pixels)
         else:
-            self._write_uint8(pixels, quality, saved_metadata)
+            self._write_uint8(pixels, quality)
     
     def _validate_data(self, pixels: np.ndarray) -> None:
         """
@@ -163,8 +164,7 @@ class ImageWriter:
     
     def _write_tiff(self, 
                     pixels: np.ndarray, 
-                    compression: str,
-                    metadata: Dict[str, Any]) -> None:
+                    compression: str) -> None:
         """
         Save as TIFF using tifffile
         Supports: uint8, uint16, uint32, float32, float64
@@ -177,15 +177,12 @@ class ImageWriter:
                 )
                 compression = 'lzw'
             
-            tiff_metadata = {}
-            if 'description' in metadata:
-                tiff_metadata['description'] = str(metadata['description'])
             
             tifffile.imwrite(
                 self.filepath,
                 pixels,
                 compression=compression,
-                metadata=tiff_metadata
+                # metadata=tiff_metadata todo
             )
             
         except Exception as e:
@@ -193,8 +190,7 @@ class ImageWriter:
     
     def _write_png(self,
                    pixels: np.ndarray,
-                   compression_level: int,
-                   metadata: Dict[str, Any]) -> None:
+                   compression_level: int) -> None:
         """
         Save PNG with uint16 support
         Uses pypng for uint16, imageio for uint8
@@ -226,7 +222,7 @@ class ImageWriter:
     def _write_png_pypng(self, pixels: np.ndarray) -> None:
         """Save uint16 PNG using pypng"""
         height, width = pixels.shape[:2]
-        
+
         # Determine image type
         if len(pixels.shape) == 2:
             # Grayscale
@@ -297,8 +293,7 @@ class ImageWriter:
                 writer.write(f, img_data)
     
     def _write_hdr(self,
-                   pixels: np.ndarray,
-                   metadata: Dict[str, Any]) -> None:
+                   pixels: np.ndarray) -> None:
         """
         Save HDR formats using imageio
         Supports: float32, float64
@@ -317,14 +312,13 @@ class ImageWriter:
     
     def _write_uint8(self, 
                      pixels: np.ndarray,
-                     quality: int,
-                     metadata: Dict[str, Any]) -> None:
+                     quality: int) -> None:
         """
         Save uint8 formats using imageio
         Supports: only uint8
         """
+        ext = self.filepath.suffix.lower()
         try:
-            ext = self.filepath.suffix.lower()
             kwargs = {}
             
             if ext in {'.jpg', '.jpeg'}:

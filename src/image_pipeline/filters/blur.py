@@ -32,9 +32,5 @@ class BlurFilter(ImageFilter):
                 result[..., i] = ndimage.gaussian_filter(pixels[..., i], sigma=self.sigma)
             return result
     
-    def update_metadata(self, img_data: ImageData) -> None:
-        super().update_metadata(img_data)
-        img_data.metadata['filter_blur'] = {'sigma': self.sigma}
-    
     def __repr__(self) -> str:
         return f"BlurFilter(sigma={self.sigma})"

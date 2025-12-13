@@ -51,7 +51,6 @@ class QuantizeFilter(ImageFilter):
 
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)
-        img_data.metadata['quantized'] = True
         img_data.metadata['bit_depth'] = self.bit_depth
         img_data.metadata['dtype'] = str(self.target_dtype)
     

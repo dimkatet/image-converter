@@ -22,10 +22,11 @@ class RemoveAlphaFilter(ImageFilter):
 
         return rgb.astype(pixels.dtype)
     
-    def update_metadata(self, img_data: ImageData) -> None:
-        super().update_metadata(img_data)
-        img_data.metadata['has_alpha'] = False
-        img_data.metadata['color_mode'] = 'RGB'
+    #  todo
+    # def update_metadata(self, img_data: ImageData) -> None:
+    #     super().update_metadata(img_data)
+    #     img_data.metadata['has_alpha'] = False
+    #     img_data.metadata['color_mode'] = 'RGB'
 
     def __repr__(self) -> str:
         return "RemoveAlphaFilter()"

@@ -1,8 +1,11 @@
-from typing import Optional, Union
+from typing import Optional
+from pathlib import Path
 import numpy as np
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.writer import ImageWriter
+from image_pipeline.metadata.manager import MetadataManager
+
 
 class ImageSaver:
     """Helper class for batch save operations"""
@@ -13,7 +16,7 @@ class ImageSaver:
                                     target_dtype: Optional[np.dtype] = None,
                                     **save_options) -> None:
         """
-        Save with data type conversion
+        Save with data type conversion and metadata
         
         Args:
             data: ImageData
@@ -29,9 +32,12 @@ class ImageSaver:
         if target_dtype and pixels.dtype != target_dtype:
             pixels = ImageSaver._convert_dtype(pixels, target_dtype)
         
-        # Save
+        # Step 1: Save pixels
         writer = ImageWriter(output_path)
         writer.write(data, metadata=metadata, **save_options)
+        
+        # Step 2: Apply metadata (format-agnostic)
+        MetadataManager.write(output_path, metadata)
     
     @staticmethod
     def _convert_dtype(pixels: np.ndarray, target_dtype: np.dtype) -> np.ndarray:

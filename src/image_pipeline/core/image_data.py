@@ -3,15 +3,17 @@ Module for reading images of various formats
 """
 import numpy as np
 from copy import deepcopy
-from typing import Dict, Any, Optional
+from typing import Optional
+
+from image_pipeline.types import ImageMetadata
 
 
 class ImageData:
     """Контейнер для пикселей + метаданные"""
     
-    def __init__(self, pixels: np.ndarray, metadata: Optional[Dict[str, Any]] = None):
+    def __init__(self, pixels: np.ndarray, metadata: Optional[ImageMetadata] = None):
         self.pixels = pixels
-        self.metadata = metadata or {}
+        self.metadata: ImageMetadata = metadata or {}
         self._sync_metadata()
     
     def _sync_metadata(self):

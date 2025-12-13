@@ -32,10 +32,11 @@ class NormalizeFilter(ImageFilter):
         
         return result.astype(np.float32)
     
-    def update_metadata(self, img_data: ImageData) -> None:
-        super().update_metadata(img_data)
-        img_data.metadata['normalized'] = True
-        img_data.metadata['normalize_range'] = (self.min_val, self.max_val)
+    # todo
+    # def update_metadata(self, img_data: ImageData) -> None:
+    #     super().update_metadata(img_data)
+    #     img_data.metadata['normalized'] = True
+    #     img_data.metadata['normalize_range'] = (self.min_val, self.max_val)
     
     def __repr__(self) -> str:
         return f"NormalizeFilter(min={self.min_val}, max={self.max_val})"

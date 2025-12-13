@@ -37,9 +37,10 @@ class SharpenFilter(ImageFilter):
                 result[..., i] = convolve(pixels[..., i], kernel, mode='reflect')
             return result
         
-    def update_metadata(self, img_data: ImageData) -> None:
-        super().update_metadata(img_data)
-        img_data.metadata['filter_sharpen'] = {'strength': self.strength}
+    # todo
+    # def update_metadata(self, img_data: ImageData) -> None:
+    #     super().update_metadata(img_data)
+    #     img_data.metadata['filter_sharpen'] = {'strength': self.strength}
     
     def __repr__(self) -> str:
         return f"SharpenFilter(strength={self.strength})"

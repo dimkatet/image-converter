@@ -44,10 +44,11 @@ class GrayscaleFilter(ImageFilter):
         
         return pixels
     
-    def update_metadata(self, img_data: ImageData) -> None:
-        super().update_metadata(img_data)
-        img_data.metadata['color_mode'] = 'grayscale'
-        img_data.metadata['grayscale_method'] = self.method
+    # todo
+    # def update_metadata(self, img_data: ImageData) -> None:
+    #     super().update_metadata(img_data)
+    #     img_data.metadata['color_mode'] = 'grayscale'
+    #     img_data.metadata['grayscale_method'] = self.method
     
     def __repr__(self) -> str:
         return f"GrayscaleFilter(method='{self.method}')"

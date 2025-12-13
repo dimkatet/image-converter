@@ -11,11 +11,10 @@ class DequantizeFilter(ImageFilter):
     Converts [0, 2^bit_depth - 1] → [0, 1]
     """
     
-    def __init__(self, bit_depth: Optional[int] = None):
+    def __init__(self, bit_depth: int = 8):
         """
         Args:
             bit_depth: Bit depth of the source data (8, 10, 12, 16, 32)
-                      If None, determined automatically from dtype
         """
         super().__init__()
         self.bit_depth = bit_depth
@@ -23,19 +22,7 @@ class DequantizeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Determine bit depth if not specified
-        if self.bit_depth is None:
-            if pixels.dtype == np.uint8:
-                bit_depth = 8
-            elif pixels.dtype == np.uint16:
-                bit_depth = 16
-            elif pixels.dtype == np.uint32:
-                bit_depth = 32
-            else:
-                raise ValueError(f"Could not determine bit depth for type {pixels.dtype}")
-        else:
-            bit_depth = self.bit_depth
-        
+        bit_depth = self.bit_depth
         max_value = (2 ** bit_depth) - 1
         
         # Normalize to [0, 1]
@@ -45,7 +32,6 @@ class DequantizeFilter(ImageFilter):
     
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)
-        img_data.metadata['dequantized'] = True
         img_data.metadata['bit_depth'] = self.bit_depth
     
     def __repr__(self) -> str:
