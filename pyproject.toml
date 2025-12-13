@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "image_pipeline"
+version = "0.1.0"
+description = "HDR / 16-bit PNG / AVIF image processing pipeline with filters"
+authors = [
+    { name="Dima Teterin", email="tet.dima.211@gmail.com" }
+]
+readme = "README.md"
+license = { text="MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    "pillow",
+    "numpy",
+    "tifffile",
+    "scipy",
+    "ImageIO",
+    "imageio[pillow]",
+    "pypng"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
