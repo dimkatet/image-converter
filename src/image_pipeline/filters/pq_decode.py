@@ -1,6 +1,7 @@
 from image_pipeline.core.image_data import ImageData
 
 import numpy as np
+import warnings
 
 from image_pipeline.types import TransferFunction
 from .base import ImageFilter
@@ -61,6 +62,14 @@ class PQDecodeFilter(ImageFilter):
         if self.peak_luminance <= 0:
             raise ValueError(
                 f"peak_luminance must be positive, got {self.peak_luminance}"
+            )
+        
+        # Soft warning for non-standard values
+        if self.peak_luminance > 10000:
+            warnings.warn(
+                f"peak_luminance={self.peak_luminance} exceeds ST.2084 standard (10000 nits). "
+                f"PQ decoding may be suboptimal for values above 10000.",
+                UserWarning
             )
     
     def update_metadata(self, img_data: ImageData) -> None:
