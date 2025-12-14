@@ -14,7 +14,6 @@ from .filters import (
 )
 
 from .io.reader import ImageReader
-from .io.saver import ImageSaver
 from .io.writer import ImageWriter
 
 __all__ = [
@@ -31,5 +30,4 @@ __all__ = [
     "BlurFilter",
     "ImageReader",
     "ImageWriter",
-    "ImageSaver",
 ]

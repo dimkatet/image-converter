@@ -29,9 +29,15 @@ class PQDecodeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
+        # Validate dtype
+        self._check_dtype(pixels, [np.float32, np.float64])
+        
+        # Strict range check [0, 1] for PQ-encoded values
+        self._check_range(pixels, 0.0, 1.0)
+        
         # Inverse PQ transformation
         # L = ((max(Y^(1/m2) - c1, 0)) / (c2 - c3 * Y^(1/m2)))^(1/m1)
-        Y_pow = np.power(np.maximum(pixels, 0.0), 1.0 / self.M2)
+        Y_pow = np.power(pixels, 1.0 / self.M2)
         
         numerator = np.maximum(Y_pow - self.C1, 0.0)
         denominator = self.C2 - self.C3 * Y_pow

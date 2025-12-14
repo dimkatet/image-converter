@@ -30,12 +30,14 @@ class PQEncodeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Normalize to [0, 1] relative to peak luminance
-        # Assume input data is in linear space
-        normalized = pixels / self.peak_luminance
+        # Validate dtype
+        self._check_dtype(pixels, [np.float32, np.float64])
         
-        # Clip negative values
-        normalized = np.maximum(normalized, 0.0)
+        # Clip to [0, peak_luminance]
+        clipped = np.clip(pixels, 0.0, self.peak_luminance)
+        
+        # Normalize to [0, 1] relative to peak luminance
+        normalized = clipped / self.peak_luminance
         
         # Apply PQ EOTF
         # Y = ((c1 + c2 * L^m1) / (1 + c3 * L^m1))^m2
@@ -59,4 +61,3 @@ class PQEncodeFilter(ImageFilter):
         
     def __repr__(self) -> str:
         return f"PQEncodeFilter(peak_luminance={self.peak_luminance})"
-

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional
+import warnings
 
 import numpy as np
 
@@ -65,6 +66,61 @@ class ImageFilter(ABC):
         
         if pixels.size == 0:
             raise ValueError(f"{self.name}: empty pixel array")
+    
+    def _check_dtype(self, pixels: np.ndarray, allowed_dtypes: list) -> None:
+        """
+        Check if pixel dtype is in allowed list
+        
+        Args:
+            pixels: Pixel array
+            allowed_dtypes: List of allowed numpy dtypes
+            
+        Raises:
+            ValueError: If dtype is not allowed
+        """
+        if pixels.dtype not in allowed_dtypes:
+            allowed_str = ", ".join(str(dt) for dt in allowed_dtypes)
+            raise ValueError(
+                f"{self.name}: requires dtype in [{allowed_str}], "
+                f"got {pixels.dtype}"
+            )
+    
+    def _check_range(self, pixels: np.ndarray, min_val: float, max_val: float) -> None:
+        """
+        Check if pixel values are within specified range
+        
+        Args:
+            pixels: Pixel array
+            min_val: Minimum allowed value
+            max_val: Maximum allowed value
+            
+        Raises:
+            ValueError: If values are outside the range
+        """
+        actual_min = pixels.min()
+        actual_max = pixels.max()
+        
+        if actual_min < min_val or actual_max > max_val:
+            raise ValueError(
+                f"{self.name}: expects values in [{min_val}, {max_val}], "
+                f"got [{actual_min:.6f}, {actual_max:.6f}]"
+            )
+    
+    def _check_positive(self, pixels: np.ndarray) -> None:
+        """
+        Check if all pixel values are non-negative
+        
+        Args:
+            pixels: Pixel array
+            
+        Raises:
+            ValueError: If any values are negative
+        """
+        if pixels.min() < 0:
+            raise ValueError(
+                f"{self.name}: input contains negative values "
+                f"(min={pixels.min():.6f}), expected non-negative values"
+            )
     
     def __repr__(self) -> str:
         return f"{self.name}()"

@@ -22,6 +22,9 @@ class DequantizeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
+        # Validate dtype
+        self._check_dtype(pixels, [np.uint8, np.uint16, np.uint32])
+        
         bit_depth = self.bit_depth
         max_value = (2 ** bit_depth) - 1
         

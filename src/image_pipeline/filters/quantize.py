@@ -1,6 +1,7 @@
 from image_pipeline.core.image_data import ImageData
 
 import numpy as np
+import warnings
 from .base import ImageFilter
 
 
@@ -38,7 +39,17 @@ class QuantizeFilter(ImageFilter):
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         
-        # Clip values to [0, 1]
+        # Validate dtype
+        self._check_dtype(pixels, [np.float32, np.float64])
+        
+        # Clip values to [0, 1] with warning
+        if pixels.min() < 0.0 or pixels.max() > 1.0:
+            warnings.warn(
+                f"{self.name}: input values [{pixels.min():.6f}, {pixels.max():.6f}] "
+                f"were clipped to [0.0, 1.0]",
+                UserWarning
+            )
+        
         clipped = np.clip(pixels, 0.0, 1.0)
         
         # Quantize: [0, 1] → [0, max_value]
