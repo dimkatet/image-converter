@@ -7,7 +7,7 @@ from image_pipeline import RemoveAlphaFilter, PQEncodeFilter, QuantizeFilter
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.filters.base import ImageFilter
 from image_pipeline.io.reader import ImageReader
-from image_pipeline.io.saver import ImageSaver
+from image_pipeline.io.writer import ImageWriter
 
 def process_image(input_path: str,
                  output_path: str,
@@ -63,7 +63,7 @@ def process_image(input_path: str,
         if verbose:
             print(f"\nSaving to: {output_path}")
         
-        ImageSaver.save_with_format_conversion(processed_data, output_path, **save_options)
+        ImageWriter(output_path).write(processed_data, **save_options)
         
         if verbose:
             print(f"  Successfully saved!")

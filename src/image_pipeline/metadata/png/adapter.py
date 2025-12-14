@@ -9,7 +9,7 @@ from image_pipeline.constants import (
     TRANSFER_TO_CICP,
     COLORSPACE_TO_CICP,
 )
-from image_pipeline.metadata.png_codec import CICPData, MDCVData, CLLIData
+from .codec import CICPData, MDCVData, CLLIData
 
 
 class PNGMetadataAdapter:

@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from pathlib import Path
 
+from image_pipeline.types import ImageMetadata
+
 
 class MetadataCodec(ABC):
     """Base class for metadata codecs"""
@@ -49,3 +51,30 @@ class MetadataCodec(ABC):
             metadata: Metadata to update
         """
         pass
+    
+class MetadataWriter(ABC):
+    """Base class for metadata writers"""
+    
+    def __init__(self, filepath: str):
+        """
+        Args:
+            filepath: Path to save the image
+        """
+        self.filepath = Path(filepath)
+    
+    @staticmethod
+    @abstractmethod
+    def write_metadata(filepath: str, metadata: ImageMetadata) -> None:
+        """
+        Apply metadata to PNG file
+        
+        Args:
+            filepath: Path to PNG file (must already exist)
+            metadata: ImageMetadata dictionary
+            
+        Raises:
+            ValueError: If data is not compatible with format
+        """
+        pass
+    
+   

@@ -1,335 +1,106 @@
 """
-Module for saving images in various formats
+Image writer facade with automatic format detection
 """
-import numpy as np
-import imageio.v3 as iio
-import tifffile
 from pathlib import Path
-from typing import Optional, Union, Dict, Any
-import warnings
-import png as pypng
+from dataclasses import dataclass
+from typing import Type, Optional
 
+from image_pipeline.core import ImageData
+from image_pipeline.metadata import MetadataWriter
 
-from image_pipeline.core.image_data import ImageData
-from image_pipeline.types import ImageMetadata
+from .formats import FormatWriter
+
+@dataclass
+class FormatWriterConfig:
+    """Configuration for a file format writer"""
+    writer: Type[FormatWriter]  # FormatWriter class
+    metadata_writer: Optional[Type[MetadataWriter]] = None  # MetadataWriter class (if format supports it)
 
 
 class ImageWriter:
-    """Class for saving images to a file"""
+    """
+    Facade for writing images with automatic format detection
     
-    TIFF_FORMATS = {'.tiff', '.tif'}
-    HDR_FORMATS = {'.exr', '.hdr', '.pfm'}
-    PNG_FORMAT = {'.png'}
-    UINT8_FORMATS = {'.jpg', '.jpeg', '.bmp', '.webp'}
-    SUPPORTED_FORMATS = TIFF_FORMATS | HDR_FORMATS | PNG_FORMAT | UINT8_FORMATS
+    Automatically selects the appropriate format-specific writer
+    based on file extension. Handles both pixel data and metadata.
+    """
     
-    # Available compression methods for TIFF
-    TIFF_COMPRESSIONS = {
-        'none': 0,
-        'lzw': 5,
-        'jpeg': 7,
-        'deflate': 8,
-        'zstd': 50000,
-    }
+    # Mapping of extensions to format writer configs
+    _WRITERS = {}
     
     def __init__(self, filepath: str):
         """
-        Initialize the writer
-        
         Args:
-            filepath: Path to save the file
+            filepath: Path to save the image
         """
         self.filepath = Path(filepath)
-        self._validate_format()
     
-    def _validate_format(self) -> None:
-        """Check if the format is supported"""
+    def write(self, img_data: ImageData, **options) -> None:
+        """
+        Write image to file (pixels + metadata)
+        
+        Args:
+            img_data: ImageData object with pixels and metadata
+            **options: Format-specific options (quality, compression, etc.)
+        """
+        # Get format configuration
+        config = self._get_format_config()
+        
+        # Create format writer
+        format_writer = config.writer(str(self.filepath))
+        
+        # 1. Validate data
+        format_writer.validate(img_data)
+        
+        # 2. Ensure directory exists
+        format_writer.ensure_directory()
+        
+        # 3. Write pixels
+        format_writer.write_pixels(img_data, **options)
+        
+        # 4. Write metadata (if format supports it)
+        if config.metadata_writer:
+            config.metadata_writer.write_metadata(str(self.filepath), img_data.metadata)
+    
+    def _get_format_config(self) -> FormatWriterConfig:
+        """Get format configuration based on file extension"""
         ext = self.filepath.suffix.lower()
-        if ext not in self.SUPPORTED_FORMATS:
+        
+        config = self._WRITERS.get(ext)
+        if not config:
+            supported = ', '.join(sorted(self._WRITERS.keys()))
             raise ValueError(
                 f"Unsupported format: {ext}. "
-                f"Supported formats: {', '.join(sorted(self.SUPPORTED_FORMATS))}"
+                f"Supported formats: {supported}"
             )
+        
+        return config
     
-    def write(self, 
-              data: ImageData,
-              quality: int = 95,
-              compression: str = 'lzw',
-              compression_level: int = 6,
-              metadata: Optional[ImageMetadata] = None) -> None:
+    @classmethod
+    def register_format(cls, extensions: list, writer_class, metadata_writer_class=None):
         """
-        Save image to file
+        Register a format writer
         
         Args:
-            data: ImageData object
-            quality: Quality for JPEG/WebP (1-100), default 95
-            compression: Compression type for TIFF ('none', 'lzw', 'jpeg', 'deflate', 'zstd')
-            compression_level: Compression level for PNG (0-9), default 6
-            metadata: Additional metadata to save
+            extensions: List of file extensions (e.g., ['.png'])
+            writer_class: FormatWriter subclass
+            metadata_writer_class: MetadataWriter class (optional)
         """
-        # Extract pixels and metadata
-        pixels = data.pixels
-        saved_metadata = metadata or data.metadata
-        
-        # Validate data
-        self._validate_data(pixels)
-        
-        # Create directory if it does not exist
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        
-        ext = self.filepath.suffix.lower()
-        
-        if ext in self.TIFF_FORMATS:
-            self._write_tiff(pixels, compression)
-        elif ext in self.PNG_FORMAT:
-            self._write_png(pixels, compression_level)
-        elif ext in self.HDR_FORMATS:
-            self._write_hdr(pixels)
-        else:
-            self._write_uint8(pixels, quality)
-    
-    def _validate_data(self, pixels: np.ndarray) -> None:
-        """
-        Validate data before saving
-        
-        Args:
-            pixels: Pixel array
-            
-        Raises:
-            ValueError: If data is invalid
-        """
-        if not isinstance(pixels, np.ndarray):
-            raise ValueError("Data must be a numpy array")
-        
-        if pixels.size == 0:
-            raise ValueError("Empty pixel array")
-        
-        ext = self.filepath.suffix.lower()
-        
-        # PNG supports uint8 and uint16
-        if ext == '.png':
-            if pixels.dtype not in (np.uint8, np.uint16):
-                raise ValueError(
-                    f"PNG supports only uint8 and uint16. "
-                    f"Got: {pixels.dtype}.\n"
-                    f"Solutions:\n"
-                    f"  1. For float: use TIFF, EXR or HDR\n"
-                    f"  2. For uint32: convert to uint16 or use TIFF"
-                )
-        
-        # Other uint8 formats
-        elif ext in self.UINT8_FORMATS:
-            if pixels.dtype != np.uint8:
-                raise ValueError(
-                    f"{ext.upper()} supports only uint8. "
-                    f"Got: {pixels.dtype}.\n"
-                    f"Solutions:\n"
-                    f"  1. Use QuantizeFilter(bit_depth=8) for conversion\n"
-                    f"  2. For uint16: save as PNG or TIFF\n"
-                    f"  3. For float32: save as TIFF, EXR or HDR"
-                )
-            
-            # JPEG does not support transparency
-            if ext in {'.jpg', '.jpeg'}:
-                if len(pixels.shape) == 3 and pixels.shape[2] == 4:
-                    raise ValueError(
-                        "JPEG does not support transparency (RGBA). "
-                        "Use PNG or convert to RGB."
-                    )
-        
-        # HDR formats require float
-        elif ext in self.HDR_FORMATS:
-            if not np.issubdtype(pixels.dtype, np.floating):
-                raise ValueError(
-                    f"{ext.upper()} requires float data. "
-                    f"Got: {pixels.dtype}. "
-                    f"Convert to float32 before saving."
-                )
-        
-        # Check range for integer types
-        if np.issubdtype(pixels.dtype, np.integer):
-            pix_min = pixels.min()
-            pix_max = pixels.max()
-            
-            if pix_min < 0:
-                raise ValueError(
-                    f"Negative pixel values ({pix_min}) are not allowed"
-                )
-            
-            dtype_max = np.iinfo(pixels.dtype).max
-            if pix_max > dtype_max:
-                raise ValueError(
-                    f"Pixel values ({pix_max}) exceed maximum for {pixels.dtype} ({dtype_max})"
-                )
-    
-    def _write_tiff(self, 
-                    pixels: np.ndarray, 
-                    compression: str) -> None:
-        """
-        Save as TIFF using tifffile
-        Supports: uint8, uint16, uint32, float32, float64
-        """
-        try:
-            if compression not in self.TIFF_COMPRESSIONS:
-                warnings.warn(
-                    f"Compression '{compression}' is not supported, using 'lzw'",
-                    UserWarning
-                )
-                compression = 'lzw'
-            
-            
-            tifffile.imwrite(
-                self.filepath,
-                pixels,
-                compression=compression,
-                # metadata=tiff_metadata todo
-            )
-            
-        except Exception as e:
-            raise IOError(f"Error saving TIFF: {e}")
-    
-    def _write_png(self,
-                   pixels: np.ndarray,
-                   compression_level: int) -> None:
-        """
-        Save PNG with uint16 support
-        Uses pypng for uint16, imageio for uint8
-        """
-        try:
-            # uint8 - use imageio (faster)
-            if pixels.dtype == np.uint8:
-                self._write_png_imageio(pixels, compression_level)
-            
-            # uint16 - use pypng (the only library with proper support)
-            elif pixels.dtype == np.uint16:
-                self._write_png_pypng(pixels)
-            
-            else:
-                raise ValueError(f"PNG does not support type {pixels.dtype}")
-                
-        except Exception as e:
-            raise IOError(f"Error saving PNG: {e}")
-    
-    def _write_png_imageio(self, pixels: np.ndarray, compression_level: int) -> None:
-        """Save uint8 PNG using imageio"""
-        iio.imwrite(
-            self.filepath,
-            pixels,
-            compress_level=compression_level,
-            optimize=True
+        config = FormatWriterConfig(
+            writer=writer_class,
+            metadata_writer=metadata_writer_class
         )
-    
-    def _write_png_pypng(self, pixels: np.ndarray) -> None:
-        """Save uint16 PNG using pypng"""
-        height, width = pixels.shape[:2]
+        
+        for ext in extensions:
+            cls._WRITERS[ext.lower()] = config
 
-        # Determine image type
-        if len(pixels.shape) == 2:
-            # Grayscale
-            greyscale = True
-            alpha = False
-            planes = 1
-            # pypng requires 2D array for grayscale
-            img_data = pixels
-        
-        elif len(pixels.shape) == 3:
-            channels = pixels.shape[2]
-            
-            if channels == 1:
-                # Grayscale with one channel
-                greyscale = True
-                alpha = False
-                planes = 1
-                img_data = pixels.squeeze(-1)
-            
-            elif channels == 2:
-                # Grayscale + Alpha
-                greyscale = True
-                alpha = True
-                planes = 2
-                # Convert to 2D array of rows
-                img_data = pixels.reshape(height, width * 2)
-            
-            elif channels == 3:
-                # RGB
-                greyscale = False
-                alpha = False
-                planes = 3
-                # Convert to 2D array of rows
-                img_data = pixels.reshape(height, width * 3)
-            
-            elif channels == 4:
-                # RGBA
-                greyscale = False
-                alpha = True
-                planes = 4
-                # Convert to 2D array of rows
-                img_data = pixels.reshape(height, width * 4)
-            
-            else:
-                raise ValueError(f"Unsupported number of channels: {channels}")
-        
-        else:
-            raise ValueError(f"Unsupported array shape: {pixels.shape}")
-        
-        # Create PNG writer
-        writer = pypng.Writer(
-            width=width,
-            height=height,
-            greyscale=greyscale,
-            alpha=alpha,
-            bitdepth=16,  # uint16 = 16 bit
-            compression=9  # maximum compression
-        )
-        
-        # Save
-        with open(self.filepath, 'wb') as f:
-            # pypng requires a list of rows (each row is a 1D array)
-            if len(img_data.shape) == 2 and planes > 1:
-                # Already in (height, width*channels) format
-                writer.write(f, img_data)
-            else:
-                # Grayscale 2D
-                writer.write(f, img_data)
-    
-    def _write_hdr(self,
-                   pixels: np.ndarray) -> None:
-        """
-        Save HDR formats using imageio
-        Supports: float32, float64
-        """
-        try:
-            kwargs = {}
-            
-            # For EXR you can specify compression
-            if self.filepath.suffix.lower() == '.exr':
-                kwargs['compression'] = 'ZIP_COMPRESSION'
-            
-            iio.imwrite(self.filepath, pixels, **kwargs)
-            
-        except Exception as e:
-            raise IOError(f"Error saving HDR format: {e}")
-    
-    def _write_uint8(self, 
-                     pixels: np.ndarray,
-                     quality: int) -> None:
-        """
-        Save uint8 formats using imageio
-        Supports: only uint8
-        """
-        ext = self.filepath.suffix.lower()
-        try:
-            kwargs = {}
-            
-            if ext in {'.jpg', '.jpeg'}:
-                kwargs['quality'] = quality
-                kwargs['optimize'] = True
-            
-            elif ext == '.webp':
-                kwargs['quality'] = quality
-                kwargs['method'] = 6
-            
-            iio.imwrite(self.filepath, pixels, **kwargs)
-            
-        except Exception as e:
-            raise IOError(f"Error saving {ext.upper()}: {e}")
+
+# Import and register formats
+from .formats.png import PNGFormatWriter
+from image_pipeline.metadata.png import PNGMetadataWriter
+
+ImageWriter.register_format(
+    extensions=['.png'],
+    writer_class=PNGFormatWriter,
+    metadata_writer_class=PNGMetadataWriter
+)

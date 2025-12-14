@@ -2,7 +2,7 @@
 Type definitions for image pipeline
 """
 from enum import Enum
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Any
 
 
 class TransferFunction(Enum):
@@ -30,7 +30,11 @@ class ImageMetadata(TypedDict, total=False):
     dtype: str
     channels: int
     bit_depth: int
-    format: str
+    
+    # === Информация о файле ===
+    format: str              # 'PNG', 'TIFF', 'EXR', etc.
+    filename: str            # Original filename
+    file_size: int           # File size in bytes
     
     # === Поля от фильтров ===
     transfer_function: TransferFunction

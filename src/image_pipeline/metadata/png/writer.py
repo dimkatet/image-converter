@@ -1,17 +1,19 @@
 import warnings
-from .png_codec import PNGMetadataCodec
-from .png_adapter import PNGMetadataAdapter
+
+from image_pipeline.metadata.base import MetadataWriter
+from .codec import PNGMetadataCodec
+from .adapter import PNGMetadataAdapter
 from image_pipeline.types import ImageMetadata
 
 
-class PNGMetadataWriter:
+class PNGMetadataWriter(MetadataWriter):
     """
     Handles PNG-specific metadata writing
     Converts ImageMetadata → PNG chunks and writes to file
     """
     
     @staticmethod
-    def write(filepath: str, metadata: ImageMetadata) -> None:
+    def write_metadata(filepath: str, metadata: ImageMetadata) -> None:
         """
         Apply metadata to PNG file
         
