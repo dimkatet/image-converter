@@ -7,6 +7,7 @@ import sys
 from image_pipeline.core.processor import process_image
 from image_pipeline.cli.filter_parser import parse_filters
 from image_pipeline.cli.filter_registry import FILTER_REGISTRY
+from image_pipeline.types import SaveOptions
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -135,7 +136,7 @@ def main():
         sys.exit(1)
     
     # Prepare save options
-    save_options = {}
+    save_options: SaveOptions = {}
     if args.quality is not None:
         save_options['quality'] = args.quality
     if args.compression is not None:

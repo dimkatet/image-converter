@@ -1,14 +1,21 @@
 """PNG format writer"""
+from typing import Optional
 import numpy as np
 import imageio.v3 as iio
 import png as pypng
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatWriter
+from image_pipeline.io.formats.png.options import PNGOptionsAdapter, PNGSaveOptions
+from image_pipeline.types import SaveOptions
 
 
 class PNGFormatWriter(FormatWriter):
     """Writer for PNG images"""
+    
+    def __init__(self, filepath: str):
+        super().__init__(filepath)
+        self.options_adapter = PNGOptionsAdapter()
     
     def validate(self, img_data: ImageData) -> None:
         """
@@ -33,38 +40,40 @@ class PNGFormatWriter(FormatWriter):
                 f"  2. For uint32: convert to uint16 or use TIFF"
             )
     
-    def write_pixels(self, img_data: ImageData, compression_level: int = 6, **options) -> None:
+    def write_pixels(self, img_data: ImageData, options: SaveOptions) -> None:
         """
         Write PNG pixel data
         
         Args:
             img_data: ImageData with pixels
-            compression_level: Compression level (0-9), default 6
-            **options: Additional options (ignored)
+            **options: Save options (will be validated by adapter)
         """
         pixels = img_data.pixels
         
+        # Validate options
+        validated_options = self.options_adapter.validate(options)
+        
         try:
             if pixels.dtype == np.uint8:
-                self._write_uint8(pixels, compression_level)
+                self._write_uint8(pixels, validated_options)
             elif pixels.dtype == np.uint16:
-                self._write_uint16(pixels)
+                self._write_uint16(pixels, validated_options)
             else:
                 raise ValueError(f"PNG does not support type {pixels.dtype}")
                 
         except Exception as e:
             raise IOError(f"Error writing PNG: {e}")
     
-    def _write_uint8(self, pixels: np.ndarray, compression_level: int) -> None:
+    def _write_uint8(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
         """Write uint8 PNG using imageio"""
         iio.imwrite(
             self.filepath,
             pixels,
-            compress_level=compression_level,
-            optimize=True
+            compress_level=options.get('compression_level'),
+            optimize=options.get('optimize')
         )
     
-    def _write_uint16(self, pixels: np.ndarray) -> None:
+    def _write_uint16(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
         """Write uint16 PNG using pypng"""
         height, width = pixels.shape[:2]
         
@@ -114,7 +123,7 @@ class PNGFormatWriter(FormatWriter):
             greyscale=greyscale, # type: ignore
             alpha=alpha,
             bitdepth=16,
-            compression=9
+            compression=options.get('compression_level')
         )
         
         # Write to file

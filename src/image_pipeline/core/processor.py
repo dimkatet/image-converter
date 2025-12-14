@@ -10,12 +10,13 @@ from image_pipeline.core.image_data import ImageData
 from image_pipeline.filters.base import ImageFilter
 from image_pipeline.io.reader import ImageReader
 from image_pipeline.io.writer import ImageWriter
+from image_pipeline.types import SaveOptions
 
 
 def process_image(input_path: str,
                  output_path: str,
                  filters: Optional[Union[List[ImageFilter], FilterPipeline]] = None,
-                 save_options: Optional[dict] = None,
+                 save_options: Optional[SaveOptions] = None,
                  verbose: bool = False) -> ImageData:
     """
     Image processing pipeline: read -> apply filters -> save
@@ -78,9 +79,9 @@ def process_image(input_path: str,
                 
         # 3. Save result
         if verbose:
-            print(f"\nSaving to: {output_path}")
+            print(f"\nSaving to: {output_path} with options: {save_options}")
         
-        ImageWriter(output_path).write(processed_data, **save_options)
+        ImageWriter(output_path).write(processed_data, options=save_options)
         
         if verbose:
             print(f"  Successfully saved!")

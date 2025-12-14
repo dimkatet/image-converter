@@ -25,27 +25,78 @@ class ImageMetadata(TypedDict, total=False):
     Typed dictionary for ImageData.metadata
     All fields are optional except those set automatically by ImageData
     """
-    # === Базовые поля (устанавливаются автоматически ImageData) ===
+    # === Base fields (set automatically by ImageData) ===
     shape: tuple[int, ...]
     dtype: str
     channels: int
     bit_depth: int
     
-    # === Информация о файле ===
+    # === File information ===
     format: str              # 'PNG', 'TIFF', 'EXR', etc.
     filename: str            # Original filename
     file_size: int           # File size in bytes
     
-    # === Поля от фильтров ===
+    # === Fields from filters ===
     transfer_function: TransferFunction
     color_space: Optional[ColorSpace]
     color_primaries: Optional[dict[str, tuple[float, float]]]  # {'red': (x, y), 'green': ..., 'blue': ..., 'white': ...}
     
-    # === HDR параметры (опциональные) ===
+    # === HDR parameters (optional) ===
     peak_luminance: float      # nits
     min_luminance: float       # nits
     max_cll: int              # Maximum Content Light Level, nits
     max_fall: int             # Maximum Frame Average Light Level, nits
     
-    # === Текстовые метаданные ===
-    text: dict[str, str]      # Произвольные key-value пары для tEXt chunks
+    # === Text metadata ===
+    text: dict[str, str]      # Arbitrary key-value pairs for tEXt chunks
+
+
+class SaveOptions(TypedDict, total=False):
+    """
+    Common save options for all image formats
+    
+    Not all formats support all options - format-specific adapters
+    will validate and filter options for each format.
+    
+    Supported formats and their options:
+    
+    PNG:
+        - compression_level (0-9, default: 6)
+        - optimize (bool, default: False)
+    
+    JPEG:
+        - quality (1-100, default: 90)
+        - optimize (bool, default: False)
+        - progressive (bool, default: False)
+        - subsampling ('4:4:4', '4:2:2', '4:2:0')
+    
+    TIFF:
+        - compression ('none', 'lzw', 'jpeg', 'deflate')
+        - quality (1-100, for JPEG compression)
+    
+    WebP:
+        - quality (1-100, default: 90)
+        - lossless (bool, default: False)
+        - method (0-6, speed vs size, default: 4)
+    
+    AVIF:
+        - quality (1-100, default: 90)
+        - lossless (bool, default: False)
+        - speed (0-10, faster vs better, default: 6)
+        - bit_depth (8, 10, 12)
+    """
+    # Compression/Quality
+    quality: int              # 1-100, for lossy formats (JPEG, WebP, AVIF)
+    compression_level: int    # 0-9, for PNG
+    compression: str          # Compression type for TIFF ('none', 'lzw', 'jpeg', etc.)
+    
+    # Format-specific flags
+    optimize: bool            # Optimize encoding (JPEG, PNG)
+    progressive: bool         # Progressive encoding (JPEG)
+    lossless: bool           # Lossless mode (WebP, AVIF)
+    
+    # Advanced
+    method: int              # Encoding method/speed (WebP: 0-6, AVIF: 0-10)
+    speed: int               # Encoding speed for AVIF (0-10)
+    bit_depth: int           # Bit depth for output (AVIF: 8, 10, 12)
+    subsampling: str         # Chroma subsampling (JPEG: '4:4:4', '4:2:2', '4:2:0')

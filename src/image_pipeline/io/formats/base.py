@@ -3,8 +3,11 @@ Base classes for format-specific readers and writers
 """
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Mapping, Optional, TypedDict
+import warnings
 
 from image_pipeline.core.image_data import ImageData
+from image_pipeline.types import SaveOptions
 
 
 class FormatReader(ABC):
@@ -36,6 +39,61 @@ class FormatReader(ABC):
         if not self.filepath.is_file():
             raise ValueError(f"Path is not a file: {self.filepath}")
 
+class SaveOptionsAdapter(ABC):
+    """
+    Base class for format-specific save options validation
+    
+    Each format implements its own adapter to:
+    - Validate option values
+    - Filter unsupported options
+    - Provide defaults
+    - Give helpful warnings
+    """
+    
+    @abstractmethod
+    def validate(self, options: SaveOptions) -> Mapping[str, Any]:
+        """
+        Validate and normalize options for specific format
+        
+        Args:
+            options: SaveOptions dict (may contain unsupported keys)
+            
+        Returns:
+            Dictionary with validated options for this format
+            
+        Raises:
+            ValueError: If option values are invalid
+            TypeError: If option types are incorrect
+        """
+        pass
+    
+    @abstractmethod
+    def get_supported_options(self) -> set[str]:
+        """
+        Return set of option names supported by this format
+        
+        Returns:
+            Set of supported option names
+        """
+        pass
+    
+    def _warn_unsupported(self, options: SaveOptions, format_name: str) -> None:
+        """
+        Warn about unsupported options
+        
+        Args:
+            options: User-provided options
+            format_name: Name of the format (e.g., 'PNG', 'JPEG')
+        """
+        supported = self.get_supported_options()
+        unsupported = set(options.keys()) - supported
+        
+        if unsupported:
+            warnings.warn(
+                f"{format_name} format does not support options: {', '.join(sorted(unsupported))}",
+                UserWarning
+            )
+
 
 class FormatWriter(ABC):
     """Base class for format-specific writers"""
@@ -61,7 +119,7 @@ class FormatWriter(ABC):
         pass
     
     @abstractmethod
-    def write_pixels(self, img_data: ImageData, **options) -> None:
+    def write_pixels(self, img_data: ImageData, options: SaveOptions) -> None:
         """
         Write pixel data to file
         

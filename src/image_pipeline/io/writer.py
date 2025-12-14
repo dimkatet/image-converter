@@ -7,6 +7,7 @@ from typing import Type, Optional
 
 from image_pipeline.core import ImageData
 from image_pipeline.metadata import MetadataWriter
+from image_pipeline.types import SaveOptions
 
 from .formats import FormatWriter
 
@@ -35,13 +36,13 @@ class ImageWriter:
         """
         self.filepath = Path(filepath)
     
-    def write(self, img_data: ImageData, **options) -> None:
+    def write(self, img_data: ImageData, options: SaveOptions) -> None:
         """
         Write image to file (pixels + metadata)
         
         Args:
             img_data: ImageData object with pixels and metadata
-            **options: Format-specific options (quality, compression, etc.)
+            options: Format-specific options (quality, compression, etc.)
         """
         # Get format configuration
         config = self._get_format_config()
@@ -56,7 +57,7 @@ class ImageWriter:
         format_writer.ensure_directory()
         
         # 3. Write pixels
-        format_writer.write_pixels(img_data, **options)
+        format_writer.write_pixels(img_data, options)
         
         # 4. Write metadata (if format supports it)
         if config.metadata_writer:
