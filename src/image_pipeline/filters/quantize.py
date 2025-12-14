@@ -16,12 +16,6 @@ class QuantizeFilter(ImageFilter):
         Args:
             bit_depth: Target bit depth (8, 10, 12, 16, 32)
         """
-        super().__init__()
-        
-        if bit_depth not in [8, 10, 12, 16, 32]:
-            raise ValueError(f"Unsupported bit depth: {bit_depth}. "
-                           f"Supported: 8, 10, 12, 16, 32")
-        
         self.bit_depth = bit_depth
         
         # Determine target data type
@@ -33,8 +27,12 @@ class QuantizeFilter(ImageFilter):
             self.target_dtype = np.uint16
         elif bit_depth == 32:
             self.target_dtype = np.uint32
+        else:
+            self.target_dtype = None  # Will be validated in validate_params
         
-        self.max_value = (2 ** bit_depth) - 1
+        self.max_value = (2 ** bit_depth) - 1 if bit_depth > 0 else 0
+        
+        super().__init__()
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
@@ -60,6 +58,13 @@ class QuantizeFilter(ImageFilter):
         
         return result
 
+    def validate_params(self) -> None:
+        if self.bit_depth not in [8, 10, 12, 16, 32]:
+            raise ValueError(
+                f"Unsupported bit depth: {self.bit_depth}. "
+                f"Supported: 8, 10, 12, 16, 32"
+            )
+    
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)
         img_data.metadata['bit_depth'] = self.bit_depth

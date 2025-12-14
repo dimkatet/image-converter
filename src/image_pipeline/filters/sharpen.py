@@ -13,8 +13,17 @@ class SharpenFilter(ImageFilter):
         Args:
             strength: Effect strength (0.0 - no change, higher - stronger)
         """
-        super().__init__()
         self.strength = strength
+        super().__init__()
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.strength, (int, float)):
+            raise TypeError(
+                f"strength must be numeric (int or float), got {type(self.strength).__name__}"
+            )
+        
+        if self.strength < 0:
+            raise ValueError(f"strength must be non-negative, got {self.strength}")
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)

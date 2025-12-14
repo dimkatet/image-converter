@@ -13,9 +13,26 @@ class NormalizeFilter(ImageFilter):
             min_val: Minimum value of the output range
             max_val: Maximum value of the output range
         """
-        super().__init__()
         self.min_val = min_val
         self.max_val = max_val
+        super().__init__()
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.min_val, (int, float)):
+            raise TypeError(
+                f"min_val must be numeric, got {type(self.min_val).__name__}"
+            )
+        
+        if not isinstance(self.max_val, (int, float)):
+            raise TypeError(
+                f"max_val must be numeric, got {type(self.max_val).__name__}"
+            )
+        
+        if self.min_val >= self.max_val:
+            raise ValueError(
+                f"min_val must be less than max_val, "
+                f"got min_val={self.min_val}, max_val={self.max_val}"
+            )
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)

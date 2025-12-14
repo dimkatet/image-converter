@@ -7,13 +7,26 @@ from .base import ImageFilter
 class GrayscaleFilter(ImageFilter):
     """Filter for converting to grayscale"""
     
+    VALID_METHODS = ['luminosity', 'average', 'lightness']
+    
     def __init__(self, method: str = 'luminosity'):
         """
         Args:
             method: Conversion method ('luminosity', 'average', 'lightness')
         """
-        super().__init__()
         self.method = method
+        super().__init__()
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.method, str):
+            raise TypeError(
+                f"method must be str, got {type(self.method).__name__}"
+            )
+        
+        if self.method not in self.VALID_METHODS:
+            raise ValueError(
+                f"method must be one of {self.VALID_METHODS}, got '{self.method}'"
+            )
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)

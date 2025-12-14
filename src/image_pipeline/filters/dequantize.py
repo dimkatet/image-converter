@@ -16,8 +16,8 @@ class DequantizeFilter(ImageFilter):
         Args:
             bit_depth: Bit depth of the source data (8, 10, 12, 16, 32)
         """
-        super().__init__()
         self.bit_depth = bit_depth
+        super().__init__()
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
@@ -32,6 +32,20 @@ class DequantizeFilter(ImageFilter):
         normalized = pixels.astype(np.float32) / max_value
         
         return normalized
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.bit_depth, int):
+            raise TypeError(
+                f"bit_depth must be int, got {type(self.bit_depth).__name__}"
+            )
+        
+        if self.bit_depth <= 0:
+            raise ValueError(f"bit_depth must be positive, got {self.bit_depth}")
+        
+        if self.bit_depth > 32:
+            raise ValueError(
+                f"bit_depth must be <= 32, got {self.bit_depth}"
+            )
     
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)

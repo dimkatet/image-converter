@@ -14,8 +14,17 @@ class BlurFilter(ImageFilter):
         Args:
             sigma: Standard deviation for Gaussian blur
         """
-        super().__init__()
         self.sigma = sigma
+        super().__init__()
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.sigma, (int, float)):
+            raise TypeError(
+                f"sigma must be numeric (int or float), got {type(self.sigma).__name__}"
+            )
+        
+        if self.sigma < 0:
+            raise ValueError(f"sigma must be non-negative, got {self.sigma}")
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)

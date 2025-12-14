@@ -18,6 +18,7 @@ class ImageFilter(ABC):
             name: Filter name (optional)
         """
         self.name = name or self.__class__.__name__
+        self.validate_params()  # Validate constructor parameters
     
     def __call__(self, img_data: ImageData) -> ImageData:
         """Apply the filter"""
@@ -66,6 +67,17 @@ class ImageFilter(ABC):
         
         if pixels.size == 0:
             raise ValueError(f"{self.name}: empty pixel array")
+    
+    def validate_params(self) -> None:
+        """
+        Validate filter parameters (called during __init__)
+        Override in subclasses to validate constructor arguments
+        
+        Raises:
+            ValueError: If parameters are invalid
+            TypeError: If parameter types are incorrect
+        """
+        pass  # By default, no validation needed
     
     def _check_dtype(self, pixels: np.ndarray, allowed_dtypes: list) -> None:
         """
@@ -124,3 +136,4 @@ class ImageFilter(ABC):
     
     def __repr__(self) -> str:
         return f"{self.name}()"
+    

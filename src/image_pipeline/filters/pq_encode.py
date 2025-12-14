@@ -24,8 +24,8 @@ class PQEncodeFilter(ImageFilter):
             peak_luminance: Peak luminance in nits (cd/m²)
                            Usually 10000 for ST.2084, but can be adjusted
         """
-        super().__init__()
         self.peak_luminance = peak_luminance
+        super().__init__()
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
@@ -52,6 +52,17 @@ class PQEncodeFilter(ImageFilter):
         pq_encoded = np.power(numerator / denominator, self.M2)
         
         return pq_encoded.astype(np.float32)
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.peak_luminance, (int, float)):
+            raise TypeError(
+                f"peak_luminance must be numeric, got {type(self.peak_luminance).__name__}"
+            )
+        
+        if self.peak_luminance <= 0:
+            raise ValueError(
+                f"peak_luminance must be positive, got {self.peak_luminance}"
+            )
     
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)

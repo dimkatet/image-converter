@@ -23,8 +23,8 @@ class PQDecodeFilter(ImageFilter):
         Args:
             peak_luminance: Peak luminance in nits (should match encoding)
         """
-        super().__init__()
         self.peak_luminance = peak_luminance
+        super().__init__()
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
@@ -51,6 +51,17 @@ class PQDecodeFilter(ImageFilter):
         linear = L * self.peak_luminance
         
         return linear.astype(np.float32)
+    
+    def validate_params(self) -> None:
+        if not isinstance(self.peak_luminance, (int, float)):
+            raise TypeError(
+                f"peak_luminance must be numeric, got {type(self.peak_luminance).__name__}"
+            )
+        
+        if self.peak_luminance <= 0:
+            raise ValueError(
+                f"peak_luminance must be positive, got {self.peak_luminance}"
+            )
     
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)
