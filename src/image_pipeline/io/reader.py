@@ -75,6 +75,7 @@ class ImageReader:
 from image_pipeline.io.formats.png import PNGFormatReader
 from image_pipeline.io.formats.tiff.reader import TiffFormatReader
 from image_pipeline.io.formats.avif import AVIFFormatReader
+from image_pipeline.io.formats.webp import WebPFormatReader
 
 ImageReader.register_format(
     extensions=['.png'],
@@ -89,4 +90,9 @@ ImageReader.register_format(
 ImageReader.register_format(
     extensions=['.avif'],
     reader_class=AVIFFormatReader
+)
+
+ImageReader.register_format(
+    extensions=['.webp'],
+    reader_class=WebPFormatReader
 )
