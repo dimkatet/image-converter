@@ -19,7 +19,8 @@ dependencies = [
     "scipy",
     "ImageIO",
     "imageio[pillow]",
-    "pypng"
+    "pypng",
+    "pillow-heif"
 ]
 
 [tool.setuptools.packages.find]

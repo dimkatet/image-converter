@@ -12,25 +12,51 @@ from image_pipeline.types import SaveOptions
 
 class PNGFormatWriter(FormatWriter):
     """Writer for PNG images"""
-    
+
     def __init__(self, filepath: str):
         super().__init__(filepath)
         self.options_adapter = PNGOptionsAdapter()
+
+    def write(self, img_data: ImageData, options: SaveOptions) -> None:
+        """
+        Write PNG image with metadata
+
+        PNG uses a two-step process:
+        1. Write pixels to file
+        2. Add metadata chunks to existing file
+
+        Args:
+            img_data: ImageData with pixels and metadata
+            options: Save options
+        """
+        # Validate options
+        validated_options = self.options_adapter.validate(options)
+
+        # Step 1: Write pixels
+        self._write_pixels(img_data.pixels, validated_options)
+
+        # Step 2: Write metadata chunks
+        self._write_metadata(img_data.metadata)
+
+    def _write_metadata(self, metadata) -> None:
+        """Add metadata chunks to existing PNG file"""
+        from image_pipeline.metadata.png import PNGMetadataWriter
+        PNGMetadataWriter.write_metadata(str(self.filepath), metadata)
     
     def validate(self, img_data: ImageData) -> None:
         """
         Validate that data is compatible with PNG format
-        
+
         PNG supports: uint8, uint16
         """
         pixels = img_data.pixels
-        
+
         if not isinstance(pixels, np.ndarray):
             raise ValueError("Data must be a numpy array")
-        
+
         if pixels.size == 0:
             raise ValueError("Empty pixel array")
-        
+
         if pixels.dtype not in (np.uint8, np.uint16):
             raise ValueError(
                 f"PNG supports only uint8 and uint16. "
@@ -39,28 +65,23 @@ class PNGFormatWriter(FormatWriter):
                 f"  1. For float: use TIFF, EXR or HDR\n"
                 f"  2. For uint32: convert to uint16 or use TIFF"
             )
-    
-    def write_pixels(self, img_data: ImageData, options: SaveOptions) -> None:
+
+    def _write_pixels(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
         """
         Write PNG pixel data
-        
+
         Args:
-            img_data: ImageData with pixels
-            **options: Save options (will be validated by adapter)
+            pixels: Pixel array (uint8 or uint16)
+            options: Validated PNG save options
         """
-        pixels = img_data.pixels
-        
-        # Validate options
-        validated_options = self.options_adapter.validate(options)
-        
         try:
             if pixels.dtype == np.uint8:
-                self._write_uint8(pixels, validated_options)
+                self._write_uint8(pixels, options)
             elif pixels.dtype == np.uint16:
-                self._write_uint16(pixels, validated_options)
+                self._write_uint16(pixels, options)
             else:
                 raise ValueError(f"PNG does not support type {pixels.dtype}")
-                
+
         except Exception as e:
             raise IOError(f"Error writing PNG: {e}")
     

@@ -124,3 +124,7 @@ ENV/
 env/
 env.bak/
 venv.bak/
+
+# Claude Code documentation
+CLAUDE.md
+.claude/

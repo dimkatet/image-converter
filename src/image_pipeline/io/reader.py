@@ -74,6 +74,7 @@ class ImageReader:
 # Import and register formats
 from image_pipeline.io.formats.png import PNGFormatReader
 from image_pipeline.io.formats.tiff.reader import TiffFormatReader
+from image_pipeline.io.formats.avif import AVIFFormatReader
 
 ImageReader.register_format(
     extensions=['.png'],
@@ -83,4 +84,9 @@ ImageReader.register_format(
 ImageReader.register_format(
     extensions=['.tiff', '.tif'],
     reader_class=TiffFormatReader
+)
+
+ImageReader.register_format(
+    extensions=['.avif'],
+    reader_class=AVIFFormatReader
 )

@@ -106,29 +106,33 @@ class FormatWriter(ABC):
         self.filepath = Path(filepath)
     
     @abstractmethod
+    def write(self, img_data: ImageData, options: SaveOptions) -> None:
+        """
+        Write image with metadata to file
+
+        This is the main entry point for writing images. Each format
+        decides how to handle pixels and metadata (separate writes,
+        single write, etc.)
+
+        Args:
+            img_data: ImageData with pixels and metadata
+            options: Format-specific options (quality, compression, etc.)
+        """
+        pass
+
+    @abstractmethod
     def validate(self, img_data: ImageData) -> None:
         """
         Validate that image data is compatible with this format
-        
+
         Args:
             img_data: ImageData to validate
-            
+
         Raises:
             ValueError: If data is not compatible with format
         """
         pass
-    
-    @abstractmethod
-    def write_pixels(self, img_data: ImageData, options: SaveOptions) -> None:
-        """
-        Write pixel data to file
-        
-        Args:
-            img_data: ImageData with pixels and metadata
-            **options: Format-specific options (quality, compression, etc.)
-        """
-        pass
-    
+
     def ensure_directory(self) -> None:
         """Create parent directory if it doesn't exist"""
         self.filepath.parent.mkdir(parents=True, exist_ok=True)

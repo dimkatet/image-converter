@@ -9,22 +9,25 @@ from image_pipeline.io.formats.base import FormatWriter
 
 class TiffFormatWriter(FormatWriter):
     """Writer for TIFF images"""
-    
+
+    def write(self, img_data: ImageData, options) -> None:
+        """
+        Write TIFF image
+
+        TIFF doesn't have custom metadata implementation yet,
+        so just write pixels.
+
+        Args:
+            img_data: ImageData with pixels and metadata
+            options: Save options
+        """
+        # TODO: Implement TIFF metadata support
+        pass
+
     def validate(self, img_data: ImageData) -> None:
         """
         Validate that data is compatible with TIFF format
-        
+
         TIFF supports: uint8, uint16, uint32, float32, float64
-        """
-        pass
-    
-    def write_pixels(self, img_data: ImageData, compression_level: int = 6, **options) -> None:
-        """
-        Write PNG pixel data
-        
-        Args:
-            img_data: ImageData with pixels
-            compression_level: Compression level (0-9), default 6
-            **options: Additional options (ignored)
         """
         pass
