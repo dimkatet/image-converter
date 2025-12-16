@@ -6,21 +6,26 @@ from typing import List, Dict, Any
 
 from image_pipeline.filters.base import ImageFilter
 from .filter_registry import FILTER_REGISTRY, get_available_filters
+from .color_space_registry import COLOR_SPACE_ALIASES
 
 
 def parse_value(value_str: str) -> Any:
     """
     Auto-detect and convert string value to appropriate Python type
-    
+
     Args:
         value_str: String value to parse
-        
+
     Returns:
-        Converted value (int, float, or string)
-        
+        Converted value (int, float, ColorSpace enum, or string)
+
     Examples:
         '5' -> 5
         '2.5' -> 2.5
+        'BT.709' -> ColorSpace.BT709
+        'bt709' -> ColorSpace.BT709
+        'sRGB' -> ColorSpace.BT709
+        'p3' -> ColorSpace.DISPLAY_P3
         'hello' -> 'hello'
     """
     # Try int
@@ -28,13 +33,18 @@ def parse_value(value_str: str) -> Any:
         return int(value_str)
     except ValueError:
         pass
-    
+
     # Try float
     try:
         return float(value_str)
     except ValueError:
         pass
-    
+
+    # Try ColorSpace enum via alias mapping (case-insensitive)
+    value_lower = value_str.lower()
+    if value_lower in COLOR_SPACE_ALIASES:
+        return COLOR_SPACE_ALIASES[value_lower]
+
     # Keep as string
     return value_str
 

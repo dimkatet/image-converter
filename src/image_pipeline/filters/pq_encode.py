@@ -77,7 +77,6 @@ class PQEncodeFilter(ImageFilter):
         super().update_metadata(img_data)
         img_data.metadata['transfer_function'] = TransferFunction.PQ
         img_data.metadata['peak_luminance'] = self.peak_luminance
-        img_data.metadata['color_space'] = img_data.metadata.get('color_space', ColorSpace.BT2020)
         
     def __repr__(self) -> str:
         return f"PQEncodeFilter(peak_luminance={self.peak_luminance})"

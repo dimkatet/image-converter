@@ -13,6 +13,7 @@ from image_pipeline.filters import (
     DequantizeFilter,
     SharpenFilter,
     BlurFilter,
+    ColorConvertFilter,
 )
 from image_pipeline.filters.base import ImageFilter
 
@@ -27,6 +28,7 @@ FILTER_REGISTRY: Dict[str, Type[ImageFilter]] = {
     'dequantize': DequantizeFilter,
     'sharpen': SharpenFilter,
     'blur': BlurFilter,
+    'color_convert': ColorConvertFilter,
 }
 
 

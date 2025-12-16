@@ -8,8 +8,10 @@ from .dequantize import DequantizeFilter
 from .remove_alpha import RemoveAlphaFilter
 
 from .blur import BlurFilter
-from .sharpen import SharpenFilter  
+from .sharpen import SharpenFilter
 from .grayscale import GrayscaleFilter
+
+from .color_convert import ColorConvertFilter
 
 __all__ = [
     "PQEncodeFilter",
@@ -21,4 +23,5 @@ __all__ = [
     "NormalizeFilter",
     "QuantizeFilter",
     "DequantizeFilter",
+    "ColorConvertFilter",
 ]

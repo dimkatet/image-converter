@@ -11,6 +11,7 @@ from .filters import (
     DequantizeFilter,
     SharpenFilter,
     BlurFilter,
+    ColorConvertFilter,
 )
 
 from .io.reader import ImageReader
@@ -28,6 +29,7 @@ __all__ = [
     "DequantizeFilter",
     "SharpenFilter",
     "BlurFilter",
+    "ColorConvertFilter",
     "ImageReader",
     "ImageWriter",
 ]
