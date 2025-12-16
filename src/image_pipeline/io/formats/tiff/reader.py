@@ -20,7 +20,7 @@ class TiffFormatReader(FormatReader):
         """
         try:
             pixels = tifffile.imread(self.filepath)
-            
+
             with tifffile.TiffFile(self.filepath) as tif:
                 metadata: ImageMetadata = {
                     'format': 'TIFF',

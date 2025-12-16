@@ -1,6 +1,6 @@
 """AVIF format reader"""
 import numpy as np
-import pillow_heif
+from imagecodecs import avif_decode
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatReader
@@ -8,41 +8,48 @@ from image_pipeline.types import ImageMetadata
 
 
 class AVIFFormatReader(FormatReader):
-    """Reader for AVIF images"""
+    """Reader for AVIF images using imagecodecs"""
 
     def read(self) -> ImageData:
         """
         Read AVIF image from file
 
         Returns:
-            ImageData object with pixels and metadata
+            ImageData object with pixels and minimal metadata
+
+        Note:
+            imagecodecs.avif_decode() does not return metadata.
+            Only basic metadata (format, filename, shape, dtype) is extracted.
         """
         try:
-            # Read AVIF file
-            heif_file = pillow_heif.open_heif(str(self.filepath))
+            # Read AVIF file bytes
+            with open(self.filepath, 'rb') as f:
+                avif_bytes = f.read()
 
-            # Convert to PIL Image then to numpy
-            pil_image = heif_file.to_pillow()
-            pixels = np.array(pil_image)
+            # Decode to numpy array
+            pixels = avif_decode(avif_bytes)
 
-            # Read metadata
-            metadata = self._read_metadata(heif_file, pixels)
+            # Read metadata (minimal - no CICP extraction)
+            metadata = self._read_metadata(pixels)
 
             return ImageData(pixels, metadata)
 
         except Exception as e:
             raise IOError(f"Error reading AVIF: {e}")
 
-    def _read_metadata(self, heif_file, pixels: np.ndarray) -> ImageMetadata:
+    def _read_metadata(self, pixels: np.ndarray) -> ImageMetadata:
         """
-        Extract metadata from AVIF file
+        Extract minimal metadata from AVIF file
 
         Args:
-            heif_file: pillow-heif file object
-            pixels: Pixel array (for shape/dtype info)
+            pixels: Decoded pixel array
 
         Returns:
-            ImageMetadata dictionary
+            ImageMetadata dictionary with basic info
+
+        Note:
+            imagecodecs does not expose CICP metadata during decoding.
+            Only dtype-based bit_depth inference is performed.
         """
         metadata: ImageMetadata = {
             'format': 'AVIF',
@@ -50,27 +57,11 @@ class AVIFFormatReader(FormatReader):
             'file_size': self.filepath.stat().st_size,
         }
 
-        # Get bit depth from heif info
-        if hasattr(heif_file, 'info') and 'bit_depth' in heif_file.info:
-            metadata['bit_depth'] = heif_file.info['bit_depth']
-
-        # Get CICP/NCLX color information
-        if hasattr(heif_file, 'info') and 'nclx' in heif_file.info:
-            nclx = heif_file.info['nclx']
-            # nclx is tuple: (color_primaries, transfer_characteristics, matrix_coefficients, full_range_flag)
-            if len(nclx) >= 2:
-                # Map transfer characteristics back to transfer_function
-                from image_pipeline.constants import TRANSFER_TO_CICP
-                for tf_name, cicp_code in TRANSFER_TO_CICP.items():
-                    if cicp_code == nclx[1]:
-                        metadata['transfer_function'] = tf_name
-                        break
-
-                # Map color primaries back to color_space
-                from image_pipeline.constants import COLORSPACE_TO_CICP
-                for cs_name, cicp_code in COLORSPACE_TO_CICP.items():
-                    if cicp_code == nclx[0]:
-                        metadata['color_space'] = cs_name
-                        break
+        # Infer bit depth from dtype
+        if pixels.dtype == np.uint8:
+            metadata['bit_depth'] = 8
+        elif pixels.dtype == np.uint16:
+            # Could be 10-bit, 12-bit, or 16-bit - default to 10 for HDR
+            metadata['bit_depth'] = 10
 
         return metadata

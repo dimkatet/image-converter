@@ -1,6 +1,6 @@
 """AVIF format writer"""
 import numpy as np
-import pillow_heif
+from imagecodecs import avif_encode
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatWriter
@@ -8,9 +8,8 @@ from image_pipeline.io.formats.avif.options import AVIFOptionsAdapter, AVIFSaveO
 from image_pipeline.io.formats.avif.adapter import AVIFEncodingMetadata, AVIFMetadataAdapter
 from image_pipeline.types import SaveOptions
 
-
 class AVIFFormatWriter(FormatWriter):
-    """Writer for AVIF images with HDR metadata support"""
+    """Writer for AVIF images with HDR metadata support using imagecodecs"""
 
     def __init__(self, filepath: str):
         super().__init__(filepath)
@@ -19,33 +18,45 @@ class AVIFFormatWriter(FormatWriter):
 
     def write(self, img_data: ImageData, options: SaveOptions) -> None:
         """
-        Write AVIF image with embedded metadata
+        Write AVIF image with embedded CICP metadata
 
-        AVIF uses a single-pass write where metadata is encoded
-        together with pixels during compression.
+        Uses imagecodecs.avif_encode with full control over:
+        - Bit depth (8/10/12/16-bit)
+        - CICP color parameters (primaries, transfer, matrix)
+        - Quality and speed settings
 
         Args:
             img_data: ImageData with pixels and metadata
             options: Save options
+
+        Raises:
+            ValueError: If data validation fails
+            IOError: If encoding or file write fails
         """
         pixels = img_data.pixels
 
         # Validate options
         validated_options = self.options_adapter.validate(options)
 
-        # Prepare metadata for encoding
+        # Prepare CICP metadata for encoding
         encoding_metadata = self.metadata_adapter.prepare_for_encoding(
             img_data.metadata
         )
 
-        # Write everything at once
-        self._write_with_metadata(pixels, validated_options, encoding_metadata)
+        # Encode and write
+        self._encode_and_write(pixels, validated_options, encoding_metadata)
 
     def validate(self, img_data: ImageData) -> None:
         """
         Validate that data is compatible with AVIF format
 
-        AVIF supports: uint8, uint16 (for 8/10/12-bit)
+        AVIF supports: uint8, uint16 (for 8/10/12/16-bit)
+
+        Args:
+            img_data: ImageData to validate
+
+        Raises:
+            ValueError: If validation fails
         """
         pixels = img_data.pixels
 
@@ -64,77 +75,99 @@ class AVIFFormatWriter(FormatWriter):
                 f"  2. For uint32: convert to uint16"
             )
 
-    def _write_with_metadata(
+        # Validate shape
+        if pixels.ndim not in (2, 3):
+            raise ValueError(f"Expected 2D or 3D array, got shape {pixels.shape}")
+
+        if pixels.ndim == 3 and pixels.shape[2] not in (1, 3, 4):
+            raise ValueError(
+                f"Expected 1, 3, or 4 channels, got {pixels.shape[2]}"
+            )
+
+    def _encode_and_write(
         self,
         pixels: np.ndarray,
         options: AVIFSaveOptions,
         metadata: AVIFEncodingMetadata
     ) -> None:
         """
-        Write AVIF with embedded metadata using pillow-heif
-
-        Uses add_frombytes to preserve true 10/12-bit data without
-        downsampling to 8-bit.
+        Encode pixels to AVIF bytes and write to file
 
         Args:
             pixels: Pixel array (uint8 or uint16)
             options: Validated AVIF save options
-            metadata: Encoding metadata (bit_depth, CICP, etc.)
+            metadata: Encoding metadata (CICP parameters, bit depth)
+
+        Raises:
+            IOError: If encoding or file write fails
         """
         try:
-            # Create HeifFile
-            hf = pillow_heif.HeifFile()
+            # Prepare encoding parameters
+            encode_params = self._build_encode_params(pixels, options, metadata)
 
-            # Determine mode and dimensions
-            height, width = pixels.shape[:2]
+            # Encode to AVIF bytes
+            avif_bytes = avif_encode(pixels, **encode_params)
 
-            if len(pixels.shape) == 2:
-                # Grayscale
-                mode = "L" if pixels.dtype == np.uint8 else "I;16"
-
-            elif len(pixels.shape) == 3:
-                channels = pixels.shape[2]
-
-                if channels == 1:
-                    # Grayscale with channel dimension
-                    pixels = pixels.squeeze(-1)
-                    mode = "L" if pixels.dtype == np.uint8 else "I;16"
-
-                elif channels == 3:
-                    # RGB
-                    mode = "RGB" if pixels.dtype == np.uint8 else "RGB;16"
-
-                elif channels == 4:
-                    # RGBA
-                    mode = "RGBA" if pixels.dtype == np.uint8 else "RGBA;16"
-
-                else:
-                    raise ValueError(f"Unsupported number of channels: {channels}")
-            else:
-                raise ValueError(f"Unsupported array shape: {pixels.shape}")
-
-            # Add image from bytes (preserves uint16 data)
-            img = hf.add_frombytes(mode, (width, height), pixels.tobytes())
-
-            # Set bit_depth from metadata (critical for 10/12-bit)
-            if 'bit_depth' in metadata:
-                img.info['bit_depth'] = metadata['bit_depth']
-
-            # Prepare save parameters
-            save_params = {
-                'quality': options.get('quality', 90),
-                'chroma': options.get('chroma_subsampling', '444'),
-            }
-
-            # Add CICP/NCLX parameters if available (as separate keys, not dict)
-            if all(k in metadata for k in ['color_primaries', 'transfer_characteristics']):
-                save_params['color_primaries'] = metadata.get('color_primaries')
-                save_params['transfer_characteristic'] = metadata.get('transfer_characteristics')
-                save_params['matrix_coefficients'] = metadata.get('matrix_coefficients')
-                save_params['full_range_flag'] = 1 if metadata.get('full_range_flag', True) else 0
-
-            # Save
-            hf.save(str(self.filepath), **save_params)
+            # Write to file
+            with open(self.filepath, 'wb') as f:
+                f.write(avif_bytes)
 
         except Exception as e:
             raise IOError(f"Error writing AVIF: {e}")
+
+    def _build_encode_params(
+        self,
+        pixels: np.ndarray,
+        options: AVIFSaveOptions,
+        metadata: AVIFEncodingMetadata
+    ) -> dict:
+        """
+        Build parameter dictionary for imagecodecs.avif_encode
+
+        Combines save options and metadata into a single dict.
+        Auto-detects bitspersample from dtype if not specified.
+
+        Args:
+            pixels: Pixel array
+            options: Save options (quality, speed, numthreads)
+            metadata: Encoding metadata (primaries, transfer, matrix, bitspersample)
+
+        Returns:
+            Dictionary of parameters for avif_encode()
+        """
+        params = {}
+
+        # Quality (required parameter)
+        params['level'] = options.get('quality', 90)
+
+        # Speed (optional)
+        if 'speed' in options:
+            params['speed'] = options['speed']
+
+        # Number of threads (optional)
+        if 'numthreads' in options:
+            params['numthreads'] = options['numthreads']
+
+        # Bit depth - prefer metadata, fallback to options, then auto-detect
+        if 'bitspersample' in metadata:
+            params['bitspersample'] = metadata['bitspersample']
+        elif 'bitspersample' in options:
+            params['bitspersample'] = options['bitspersample']
+        else:
+            # Auto-detect from dtype
+            if pixels.dtype == np.uint8:
+                params['bitspersample'] = 8
+            elif pixels.dtype == np.uint16:
+                # Default to 10-bit for uint16 (common HDR use case)
+                params['bitspersample'] = 10
+
+        # params['bitspersample'] = 12
+        # CICP parameters (primaries, transfer, matrix)
+        if 'primaries' in metadata:
+            params['primaries'] = metadata['primaries']
+        if 'transfer' in metadata:
+            params['transfer'] = metadata['transfer']
+        if 'matrix' in metadata:
+            params['matrix'] = metadata['matrix']
+
+        return params

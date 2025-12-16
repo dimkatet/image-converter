@@ -56,3 +56,10 @@ COLORSPACE_TO_CICP = {
     ColorSpace.BT2020: 9,
     ColorSpace.DISPLAY_P3: 12,
 }
+
+# Color space → cICP matrix_coefficients code
+COLORSPACE_TO_MATRIX = {
+    ColorSpace.BT709: 1,      # BT.709 matrix
+    ColorSpace.BT2020: 9,     # BT.2020 non-constant luminance
+    ColorSpace.DISPLAY_P3: 1, # Use BT.709 matrix for Display P3
+}

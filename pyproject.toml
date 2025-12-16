@@ -20,7 +20,7 @@ dependencies = [
     "ImageIO",
     "imageio[pillow]",
     "pypng",
-    "pillow-heif"
+    "imagecodecs"
 ]
 
 [tool.setuptools.packages.find]

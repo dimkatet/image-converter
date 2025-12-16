@@ -1,7 +1,7 @@
 """
 AVIF save options adapter
 """
-from typing import TypedDict, Mapping, Any
+from typing import TypedDict
 import warnings
 
 from image_pipeline.io.formats.base import SaveOptionsAdapter
@@ -9,14 +9,15 @@ from image_pipeline.types import SaveOptions
 
 
 class AVIFSaveOptions(TypedDict, total=False):
-    """AVIF-specific save options"""
-    quality: int  # 0-100, default 90
-    speed: int  # 0-10 (0=slowest/best, 10=fastest/worst), default 4
-    chroma_subsampling: str  # "444", "422", "420", default "444"
+    """AVIF-specific save options for imagecodecs"""
+    quality: int           # 0-100 (0=lowest, 100=lossless), default 90
+    speed: int             # 0-10 (0=slowest/best, 10=fastest/worst), default 6
+    bitspersample: int     # 8, 10, 12, or 16, default auto-detect
+    numthreads: int        # Number of encoding threads, default 1
 
 
 class AVIFOptionsAdapter(SaveOptionsAdapter):
-    """Adapter for AVIF save options"""
+    """Adapter for AVIF save options (imagecodecs backend)"""
 
     def validate(self, options: SaveOptions) -> AVIFSaveOptions:
         """
@@ -51,22 +52,27 @@ class AVIFOptionsAdapter(SaveOptionsAdapter):
                 raise ValueError(f"speed must be 0-10, got {speed}")
             result['speed'] = speed
         else:
-            result['speed'] = 4  # Default
+            result['speed'] = 6  # Default (balanced)
 
-        # Chroma subsampling
-        if 'chroma_subsampling' in options:
-            chroma = options['chroma_subsampling']
-            valid_chroma = {'444', '422', '420'}
-            if chroma not in valid_chroma:
+        # Bit depth
+        if 'bit_depth' in options:
+            bit_depth = options['bit_depth']
+            valid_depths = {8, 10, 12, 16}
+            if bit_depth not in valid_depths:
                 raise ValueError(
-                    f"chroma_subsampling must be one of {valid_chroma}, got {chroma}"
+                    f"bit_depth must be one of {valid_depths}, got {bit_depth}"
                 )
-            result['chroma_subsampling'] = chroma
-        else:
-            result['chroma_subsampling'] = '444'  # Default: 444 for HDR quality
+            result['bitspersample'] = bit_depth
+
+        # Number of threads
+        if 'numthreads' in options:
+            threads = options['numthreads']
+            if not isinstance(threads, int) or threads < 1:
+                raise ValueError(f"numthreads must be >= 1, got {threads}")
+            result['numthreads'] = threads
 
         return result
 
     def get_supported_options(self) -> set[str]:
         """Return set of AVIF-supported option names"""
-        return {'quality', 'speed', 'chroma_subsampling'}
+        return {'quality', 'speed', 'bit_depth', 'numthreads'}
