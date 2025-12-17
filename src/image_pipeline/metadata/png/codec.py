@@ -484,24 +484,26 @@ class PNGMetadataCodec:
         """Parse mDCv chunk - Mastering Display Color Volume"""
         if len(data) < 24:
             return {}
-        
-        # All values are big-endian 16-bit unsigned integers
-        values = struct.unpack('>12H', data[:24])
-        
+
+        # Primaries and white point: 16-bit unsigned (8 values)
+        # Luminance: 32-bit unsigned (2 values)
+        primaries_data = struct.unpack('>8H', data[:16])
+        luminance_data = struct.unpack('>2I', data[16:24])
+
         # Display primaries (x, y for R, G, B) in 0.00002 units
         display_primaries = {
-            'red': (values[0] * 0.00002, values[1] * 0.00002),
-            'green': (values[2] * 0.00002, values[3] * 0.00002),
-            'blue': (values[4] * 0.00002, values[5] * 0.00002)
+            'red': (primaries_data[0] * 0.00002, primaries_data[1] * 0.00002),
+            'green': (primaries_data[2] * 0.00002, primaries_data[3] * 0.00002),
+            'blue': (primaries_data[4] * 0.00002, primaries_data[5] * 0.00002)
         }
-        
+
         # White point in 0.00002 units
-        white_point = (values[6] * 0.00002, values[7] * 0.00002)
-        
-        # Luminance values in 0.0001 nits
-        max_luminance = values[8] * 0.0001
-        min_luminance = values[9] * 0.0001
-        
+        white_point = (primaries_data[6] * 0.00002, primaries_data[7] * 0.00002)
+
+        # Luminance values in 0.0001 nits (32-bit allows up to ~429496 nits)
+        max_luminance = luminance_data[0] * 0.0001
+        min_luminance = luminance_data[1] * 0.0001
+
         return {
             'display_primaries': display_primaries,
             'white_point': white_point,
@@ -583,15 +585,20 @@ class PNGMetadataCodec:
     
     def _create_mdcv_chunk(self, mdcv: MDCVData) -> PNGChunk:
         """Create mDCv chunk"""
-        data = struct.pack('>12H',
+        # Pack primaries and white point as 16-bit (8 values)
+        primaries_data = struct.pack('>8H',
             mdcv.display_primaries_x[0], mdcv.display_primaries_y[0],  # Red
             mdcv.display_primaries_x[1], mdcv.display_primaries_y[1],  # Green
             mdcv.display_primaries_x[2], mdcv.display_primaries_y[2],  # Blue
-            mdcv.white_point_x, mdcv.white_point_y,
-            mdcv.max_display_mastering_luminance,
-            mdcv.min_display_mastering_luminance,
-            0, 0  # Reserved
+            mdcv.white_point_x, mdcv.white_point_y
         )
+        # Pack luminance as 32-bit (2 values)
+        luminance_data = struct.pack('>2I',
+            mdcv.max_display_mastering_luminance,
+            mdcv.min_display_mastering_luminance
+        )
+
+        data = primaries_data + luminance_data
         return PNGChunk(chunk_type=ChunkType.MDCV.value, data=data)
     
     def _create_clli_chunk(self, clli: CLLIData) -> PNGChunk:

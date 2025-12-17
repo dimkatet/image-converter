@@ -9,19 +9,35 @@ from image_pipeline.types import SaveOptions
 class WebPSaveOptions(TypedDict, total=False):
     """
     WebP-specific save options
+
+    Options:
+        quality: Quality level (0-100, default: 80)
+            For lossy: lower = smaller file, worse quality
+            For lossless: ignored
+
+        lossless: Lossless compression (bool, default: False)
+            True = lossless compression
+            False = lossy compression
+
+        method: Compression effort (0-6, default: 4)
+            0 = fastest, largest file
+            6 = slowest, smallest file
+
+        numthreads: Number of threads (default: None = auto)
+            Use multi-threading for encoding
     """
-    quality: int        # 0-100 for lossy compression (ignored for lossless)
-    lossless: bool      # True = lossless, False = lossy (default)
-    method: int         # 0-6, compression effort/speed trade-off
-    exact: bool         # Preserve RGB values in transparent areas
+    quality: int        # 0-100 for lossy compression
+    lossless: bool      # True = lossless, False = lossy
+    method: int         # 0-6, compression effort/speed
+    numthreads: int     # Number of threads for encoding
 
 
 class WebPOptionsAdapter(SaveOptionsAdapter):
     """Adapter for WebP save options"""
 
     def get_supported_options(self) -> set[str]:
-        """WebP supports quality, lossless, method, and exact"""
-        return {'quality', 'lossless', 'method', 'exact'}
+        """WebP supports quality, lossless, method, and numthreads"""
+        return {'quality', 'lossless', 'method', 'numthreads'}
 
     def validate(self, options: SaveOptions) -> WebPSaveOptions:
         """
@@ -91,17 +107,21 @@ class WebPOptionsAdapter(SaveOptionsAdapter):
         else:
             validated['method'] = 4  # Default
 
-        # exact (bool) - preserve RGB in transparent areas
-        if 'exact' in options:
-            exact = options['exact']
+        # numthreads (int) - number of threads
+        if 'numthreads' in options:
+            numthreads = options['numthreads']
 
-            if not isinstance(exact, bool):
+            if not isinstance(numthreads, int):
                 raise TypeError(
-                    f"exact must be bool, got {type(exact).__name__}"
+                    f"numthreads must be int, got {type(numthreads).__name__}"
                 )
 
-            validated['exact'] = exact
-        else:
-            validated['exact'] = False  # Default
+            if numthreads < 1:
+                raise ValueError(
+                    f"numthreads must be >= 1, got {numthreads}"
+                )
+
+            validated['numthreads'] = numthreads
+        # else: Don't set default - let imagecodecs decide
 
         return validated

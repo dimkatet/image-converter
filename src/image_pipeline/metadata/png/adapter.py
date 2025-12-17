@@ -135,11 +135,13 @@ class PNGMetadataAdapter:
         
         white_point_x = to_mdcv_coord(primaries['white'][0])
         white_point_y = to_mdcv_coord(primaries['white'][1])
-        
-        # todo
-        # Luminance в формат mDCv (умножаем на 10000 для 0.0001 nits units)
-        max_luminance_mdcv = max(0, min(4294967295, int(peak_luminance)))
-        min_luminance_mdcv = max(0, min(4294967295, int(min_luminance)))
+
+        # Luminance в формат mDCv (делим на 0.0001 для получения units)
+        # mDCv stores luminance in units of 0.0001 nits
+        # So 10000 nits → 10000 / 0.0001 = 100000000
+        # Max value for uint32: 4294967295 (~429496 nits)
+        max_luminance_mdcv = max(0, min(4294967295, round(peak_luminance / 0.0001)))
+        min_luminance_mdcv = max(0, min(4294967295, round(min_luminance / 0.0001)))
         
         return MDCVData(
             display_primaries_x=display_primaries_x,

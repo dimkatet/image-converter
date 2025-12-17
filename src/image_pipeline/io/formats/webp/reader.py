@@ -1,8 +1,6 @@
-"""WebP format reader"""
+"""WebP format reader using imagecodecs"""
 import os
-from pathlib import Path
-from PIL import Image
-import numpy as np
+from imagecodecs import webp_decode
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatReader
@@ -10,46 +8,38 @@ from image_pipeline.types import ImageMetadata
 
 
 class WebPFormatReader(FormatReader):
-    """Reader for WebP images"""
+    """Reader for WebP images using imagecodecs"""
 
     def read(self) -> ImageData:
         """
         Read WebP image
 
+        Note: imagecodecs.webp_decode doesn't extract metadata (EXIF/XMP).
+        Only pixel data and basic file info are returned.
+
         Returns:
-            ImageData with pixels and metadata
+            ImageData with pixels and minimal metadata
 
         Raises:
             IOError: If file cannot be read or is not a valid WebP
         """
         try:
-            # Read image with Pillow
-            with Image.open(self.filepath) as img:
-                # Convert to numpy array
-                pixels = np.array(img)
+            # Read WebP file bytes
+            with open(self.filepath, 'rb') as f:
+                webp_bytes = f.read()
 
-                # Extract metadata
-                metadata: ImageMetadata = {
-                    'format': 'WebP',
-                    'filename': self.filepath.name,
-                    'file_size': os.path.getsize(self.filepath),
-                }
+            # Decode to numpy array
+            pixels = webp_decode(webp_bytes)
 
-                # Extract EXIF if present
-                if 'exif' in img.info:
-                    # Store raw EXIF data for potential re-writing
-                    metadata['exif'] = img.info['exif']  # type: ignore
+            # Extract minimal metadata
+            metadata: ImageMetadata = {
+                'format': 'WebP',
+                'filename': self.filepath.name,
+                'file_size': os.path.getsize(self.filepath),
+            }
 
-                # Extract ICC profile if present
-                if 'icc_profile' in img.info:
-                    metadata['icc_profile'] = img.info['icc_profile']  # type: ignore
-
-                # Extract XMP if present
-                if 'xmp' in img.info:
-                    metadata['xmp'] = img.info['xmp']  # type: ignore
-
-                # ImageData will automatically fill: shape, dtype, channels, bit_depth
-                return ImageData(pixels, metadata)
+            # ImageData will automatically fill: shape, dtype, channels, bit_depth
+            return ImageData(pixels, metadata)
 
         except Exception as e:
             raise IOError(f"Error reading WebP: {e}")

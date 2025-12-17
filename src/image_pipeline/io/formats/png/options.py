@@ -8,66 +8,89 @@ from image_pipeline.types import SaveOptions
 class PNGSaveOptions(TypedDict, total=False):
     """
     PNG-specific save options
+
+    Options:
+        compression_level: Compression level (0-9, default: 6)
+            0 = no compression (fast)
+            9 = maximum compression (slow)
+
+        strategy: Compression strategy (0-4, default: 0)
+            0 = Z_DEFAULT_STRATEGY (best for most images)
+            1 = Z_FILTERED (for filtered data)
+            2 = Z_HUFFMAN_ONLY (fast, poor compression)
+            3 = Z_RLE (good for images with large uniform areas)
+            4 = Z_FIXED (fastest, worst compression)
     """
     compression_level: int  # 0 (no compression) to 9 (max compression)
-    optimize: bool          # Whether to optimize the PNG file size
+    strategy: int           # zlib compression strategy (0-4)
 
 
 class PNGOptionsAdapter(SaveOptionsAdapter):
     """Adapter for PNG save options"""
-    
+
     def get_supported_options(self) -> set[str]:
-        """PNG supports compression_level and optimize"""
-        return {'compression_level', 'optimize'}
-    
+        """PNG supports compression_level and strategy"""
+        return {'compression_level', 'strategy'}
+
     def validate(self, options: SaveOptions) -> PNGSaveOptions:
         """
         Validate and normalize PNG save options
-        
+
         Args:
             options: User-provided save options
-            
+
         Returns:
             Dictionary with validated PNG-specific options
-            
+
         Raises:
             ValueError: If option values are invalid
             TypeError: If option types are incorrect
         """
         validated: PNGSaveOptions = {}
-        
+
         # Warn about unsupported options
         self._warn_unsupported(options, 'PNG')
-        
+
         # compression_level (0-9)
         if 'compression_level' in options:
             level = options['compression_level']
-            
+
             if not isinstance(level, int):
                 raise TypeError(
                     f"compression_level must be int, got {type(level).__name__}"
                 )
-            
+
             if not 0 <= level <= 9:
                 raise ValueError(
                     f"compression_level must be in range [0, 9], got {level}"
                 )
-            
+
             validated['compression_level'] = level
         else:
             validated['compression_level'] = 6  # Default
-        
-        # optimize (bool)
-        if 'optimize' in options:
-            optimize = options['optimize']
-            
-            if not isinstance(optimize, bool):
+
+        # strategy (0-4)
+        if 'strategy' in options:
+            strategy = options['strategy']
+
+            if not isinstance(strategy, int):
                 raise TypeError(
-                    f"optimize must be bool, got {type(optimize).__name__}"
+                    f"strategy must be int, got {type(strategy).__name__}"
                 )
-            
-            validated['optimize'] = optimize
+
+            if not 0 <= strategy <= 4:
+                raise ValueError(
+                    f"strategy must be in range [0, 4], got {strategy}\n"
+                    f"Valid strategies:\n"
+                    f"  0 = DEFAULT (best for most images)\n"
+                    f"  1 = FILTERED\n"
+                    f"  2 = HUFFMAN_ONLY (not recommended)\n"
+                    f"  3 = RLE (fast for uniform areas)\n"
+                    f"  4 = FIXED (not recommended)"
+                )
+
+            validated['strategy'] = strategy
         else:
-            validated['optimize'] = False  # Default
-        
+            validated['strategy'] = 0  # Default to Z_DEFAULT_STRATEGY
+
         return validated

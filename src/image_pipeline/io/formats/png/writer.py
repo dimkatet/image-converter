@@ -1,8 +1,6 @@
-"""PNG format writer"""
-from typing import Optional
+"""PNG format writer using imagecodecs"""
 import numpy as np
-import imageio.v3 as iio
-import png as pypng
+from imagecodecs import png_encode
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatWriter
@@ -11,7 +9,7 @@ from image_pipeline.types import SaveOptions
 
 
 class PNGFormatWriter(FormatWriter):
-    """Writer for PNG images"""
+    """Writer for PNG images using imagecodecs"""
 
     def __init__(self, filepath: str):
         super().__init__(filepath)
@@ -22,8 +20,8 @@ class PNGFormatWriter(FormatWriter):
         Write PNG image with metadata
 
         PNG uses a two-step process:
-        1. Write pixels to file
-        2. Add metadata chunks to existing file
+        1. Encode pixels to PNG bytes using imagecodecs
+        2. Add metadata chunks to the encoded PNG file
 
         Args:
             img_data: ImageData with pixels and metadata
@@ -32,10 +30,10 @@ class PNGFormatWriter(FormatWriter):
         # Validate options
         validated_options = self.options_adapter.validate(options)
 
-        # Step 1: Write pixels
+        # Step 1: Encode and write pixels
         self._write_pixels(img_data.pixels, validated_options)
 
-        # Step 2: Write metadata chunks
+        # Step 2: Add metadata chunks
         self._write_metadata(img_data.metadata)
 
     def _write_metadata(self, metadata) -> None:
@@ -48,6 +46,12 @@ class PNGFormatWriter(FormatWriter):
         Validate that data is compatible with PNG format
 
         PNG supports: uint8, uint16
+
+        Args:
+            img_data: ImageData to validate
+
+        Raises:
+            ValueError: If validation fails
         """
         pixels = img_data.pixels
 
@@ -62,91 +66,43 @@ class PNGFormatWriter(FormatWriter):
                 f"PNG supports only uint8 and uint16. "
                 f"Got: {pixels.dtype}.\n"
                 f"Solutions:\n"
-                f"  1. For float: use TIFF, EXR or HDR\n"
-                f"  2. For uint32: convert to uint16 or use TIFF"
+                f"  1. For float: use quantize filter first\n"
+                f"  2. For uint32: convert to uint16"
+            )
+
+        # Validate shape
+        if pixels.ndim not in (2, 3):
+            raise ValueError(f"Expected 2D or 3D array, got shape {pixels.shape}")
+
+        if pixels.ndim == 3 and pixels.shape[2] not in (1, 2, 3, 4):
+            raise ValueError(
+                f"Expected 1, 2, 3, or 4 channels, got {pixels.shape[2]}"
             )
 
     def _write_pixels(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
         """
-        Write PNG pixel data
+        Encode and write PNG pixel data using imagecodecs
+
+        imagecodecs.png_encode handles both uint8 and uint16 automatically.
 
         Args:
             pixels: Pixel array (uint8 or uint16)
             options: Validated PNG save options
+
+        Raises:
+            IOError: If encoding or writing fails
         """
         try:
-            if pixels.dtype == np.uint8:
-                self._write_uint8(pixels, options)
-            elif pixels.dtype == np.uint16:
-                self._write_uint16(pixels, options)
-            else:
-                raise ValueError(f"PNG does not support type {pixels.dtype}")
+            # Extract options
+            level = options.get('compression_level', 6)
+            strategy = options.get('strategy', 0)
+
+            # Encode to PNG bytes
+            png_bytes = png_encode(pixels, level=level, strategy=strategy)
+
+            # Write to file
+            with open(self.filepath, 'wb') as f:
+                f.write(png_bytes)
 
         except Exception as e:
             raise IOError(f"Error writing PNG: {e}")
-    
-    def _write_uint8(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
-        """Write uint8 PNG using imageio"""
-        iio.imwrite(
-            self.filepath,
-            pixels,
-            compress_level=options.get('compression_level'),
-            optimize=options.get('optimize')
-        )
-    
-    def _write_uint16(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:
-        """Write uint16 PNG using pypng"""
-        height, width = pixels.shape[:2]
-        
-        # Determine image type
-        if len(pixels.shape) == 2:
-            # Grayscale
-            greyscale = True
-            alpha = False
-            img_data = pixels
-        
-        elif len(pixels.shape) == 3:
-            channels = pixels.shape[2]
-            
-            if channels == 1:
-                greyscale = True
-                alpha = False
-                img_data = pixels.squeeze(-1)
-            
-            elif channels == 2:
-                # Grayscale + Alpha
-                greyscale = True
-                alpha = True
-                img_data = pixels.reshape(height, width * 2)
-            
-            elif channels == 3:
-                # RGB
-                greyscale = False
-                alpha = False
-                img_data = pixels.reshape(height, width * 3)
-            
-            elif channels == 4:
-                # RGBA
-                greyscale = False
-                alpha = True
-                img_data = pixels.reshape(height, width * 4)
-            
-            else:
-                raise ValueError(f"Unsupported number of channels: {channels}")
-        
-        else:
-            raise ValueError(f"Unsupported array shape: {pixels.shape}")
-        
-        # Create PNG writer
-        writer = pypng.Writer(
-            width=width,
-            height=height,
-            greyscale=greyscale, # type: ignore
-            alpha=alpha,
-            bitdepth=16,
-            compression=options.get('compression_level')
-        )
-        
-        # Write to file
-        with open(self.filepath, 'wb') as f:
-            writer.write(f, img_data)

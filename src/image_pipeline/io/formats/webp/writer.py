@@ -1,6 +1,6 @@
-"""WebP format writer"""
+"""WebP format writer using imagecodecs"""
 import numpy as np
-from PIL import Image
+from imagecodecs import webp_encode
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatWriter
@@ -9,7 +9,7 @@ from image_pipeline.types import SaveOptions
 
 
 class WebPFormatWriter(FormatWriter):
-    """Writer for WebP images"""
+    """Writer for WebP images using imagecodecs"""
 
     def __init__(self, filepath: str):
         super().__init__(filepath)
@@ -17,10 +17,13 @@ class WebPFormatWriter(FormatWriter):
 
     def write(self, img_data: ImageData, options: SaveOptions) -> None:
         """
-        Write WebP image with metadata
+        Write WebP image
+
+        Note: WebP in imagecodecs doesn't support metadata (EXIF/XMP).
+        For metadata preservation, consider using PNG or AVIF formats.
 
         Args:
-            img_data: ImageData with pixels and metadata
+            img_data: ImageData with pixels
             options: Save options
 
         Raises:
@@ -33,11 +36,8 @@ class WebPFormatWriter(FormatWriter):
         # Validate options
         validated_options = self.options_adapter.validate(options)
 
-        # Ensure output directory exists
-        self.ensure_directory()
-
-        # Write pixels with metadata
-        self._write_image(img_data, validated_options)
+        # Write pixels
+        self._write_pixels(img_data.pixels, validated_options)
 
     def validate(self, img_data: ImageData) -> None:
         """
@@ -80,48 +80,46 @@ class WebPFormatWriter(FormatWriter):
                     f"Got {channels} channels."
                 )
 
-    def _write_image(self, img_data: ImageData, options: WebPSaveOptions) -> None:
+    def _write_pixels(self, pixels: np.ndarray, options: WebPSaveOptions) -> None:
         """
-        Write WebP image with pixels and metadata
+        Encode and write WebP pixel data using imagecodecs
+
+        imagecodecs.webp_encode parameters:
+        - level: quality/compression level (0-100)
+        - lossless: bool (True for lossless, False for lossy)
+        - method: compression effort (0-6)
+        - numthreads: number of threads
 
         Args:
-            img_data: ImageData with pixels and metadata
+            pixels: Pixel array (uint8 only)
             options: Validated WebP save options
+
+        Raises:
+            IOError: If encoding or writing fails
         """
         try:
-            pixels = img_data.pixels
+            # Extract options
+            quality = options.get('quality', 80)
+            lossless = options.get('lossless', False)
+            method = options.get('method', 4)
+            numthreads = options.get('numthreads')
 
-            # Convert numpy array to PIL Image
-            # Handle grayscale (H, W) by converting to (H, W, 1)
-            if pixels.ndim == 2:
-                img = Image.fromarray(pixels, mode='L')
-            elif pixels.shape[2] == 1:
-                img = Image.fromarray(pixels.squeeze(-1), mode='L')
-            elif pixels.shape[2] == 3:
-                img = Image.fromarray(pixels, mode='RGB')
-            elif pixels.shape[2] == 4:
-                img = Image.fromarray(pixels, mode='RGBA')
-            else:
-                raise ValueError(f"Unsupported channel count: {pixels.shape[2]}")
-
-            # Prepare save kwargs
-            save_kwargs = {
-                'quality': options.get('quality'),
-                'method': options.get('method'),
-                'lossless': options.get('lossless'),
-                'exact': options.get('exact'),
+            # Build encode parameters
+            encode_params = {
+                'level': quality,
+                'lossless': lossless,
+                'method': method,
             }
 
-            # Add EXIF if present in metadata
-            if 'exif' in img_data.metadata:
-                save_kwargs['exif'] = img_data.metadata['exif']
+            if numthreads is not None:
+                encode_params['numthreads'] = numthreads
 
-            # Add ICC profile if present in metadata
-            if 'icc_profile' in img_data.metadata:
-                save_kwargs['icc_profile'] = img_data.metadata['icc_profile']
+            # Encode to WebP bytes
+            webp_bytes = webp_encode(pixels, **encode_params)
 
-            # Save to file
-            img.save(self.filepath, format='WebP', **save_kwargs)
+            # Write to file
+            with open(self.filepath, 'wb') as f:
+                f.write(webp_bytes)
 
         except Exception as e:
             raise IOError(f"Error writing WebP: {e}")
