@@ -1,12 +1,14 @@
 # Image Pipeline
 
-A flexible library for image processing and conversion with support for HDR, 16-bit PNG, and various color spaces.
+A flexible library for professional HDR image processing with support for PQ encoding, scene/display-referred workflows, and comprehensive HDR metadata handling.
 
 ## Features
 
-- **Wide format support**: TIFF, PNG (8/16-bit), JPEG, WebP, EXR, HDR, PFM and more
-- **HDR processing**: work with high dynamic range images
-- **PQ encoding**: Perceptual Quantizer (ST.2084) support for HDR content
+- **Wide format support**: TIFF, PNG (8/16-bit), JPEG, WebP, AVIF, EXR, HDR, PFM
+- **Professional HDR workflows**: scene-referred ↔ display-referred conversion with paper white tracking
+- **PQ encoding**: Perceptual Quantizer (ST.2084) support for HDR10 content
+- **Color space conversion**: RGB color space transforms (BT.709, BT.2020, Display P3) via CIE XYZ
+- **HDR metadata**: MaxCLL/MaxFALL computation, mastering display metadata, PNG cICP/mDCv/cLLi chunks
 - **Flexible filter system**: modular architecture for creating processing pipelines
 - **Precise bit depth handling**: conversion between 8/10/12/16/32-bit formats
 - **Convenient API**: simple interface for quick image processing
@@ -40,24 +42,29 @@ result = process_image(
 )
 ```
 
-### HDR Processing with PQ Encoding
+### HDR Processing with Scene-Referred Workflow
 
 ```python
 from image_pipeline import (
-    RemoveAlphaFilter, 
-    PQEncodeFilter, 
+    RemoveAlphaFilter,
+    ColorConvertFilter,
+    AbsoluteLuminanceFilter,
+    PQEncodeFilter,
     QuantizeFilter,
     process_image
 )
+from image_pipeline.types import ColorSpace
 
-# HDR → PQ-encoded 16-bit PNG
+# Scene-referred EXR → Display-referred PQ AVIF with HDR10 metadata
 process_image(
-    input_path='hdr_image.exr',
-    output_path='output_pq.png',
+    input_path='scene_linear.exr',
+    output_path='hdr10_output.avif',
     filters=[
         RemoveAlphaFilter(),
-        PQEncodeFilter(peak_luminance=10000),
-        QuantizeFilter(bit_depth=16)
+        ColorConvertFilter(source=ColorSpace.BT709, target=ColorSpace.BT2020),
+        AbsoluteLuminanceFilter(paper_white=100),  # Scene → Display (computes MaxCLL/MaxFALL)
+        PQEncodeFilter(reference_peak=10000),       # Apply PQ curve
+        QuantizeFilter(bit_depth=12)                # 12-bit for HDR10
     ],
     verbose=True
 )
@@ -88,34 +95,46 @@ ImageSaver.save_with_format_conversion(
 
 ## Available Filters
 
-### Color Transformations
-- **`RemoveAlphaFilter()`** - remove alpha channel (RGBA → RGB)
-- **`GrayscaleFilter(method='luminosity')`** - convert to grayscale
-- **`NormalizeFilter(min_val=0.0, max_val=1.0)`** - normalize value range
+### Scene/Display Luminance Conversion
+- **`AbsoluteLuminanceFilter(paper_white=100)`** - Convert scene-referred → display-referred (computes MaxCLL/MaxFALL)
+- **`RelativeLuminanceFilter(paper_white=100)`** - Convert display-referred → scene-referred (inverse operation)
 
-### HDR and Quantization
-- **`PQEncodeFilter(peak_luminance=10000)`** - apply PQ gamma curve (ST.2084)
-- **`PQDecodeFilter(peak_luminance=10000)`** - decode PQ back to linear values
-- **`QuantizeFilter(bit_depth=8)`** - quantize float → integer (8/10/12/16/32-bit)
-- **`DequantizeFilter(bit_depth=None)`** - dequantize integer → float
+### Color Space Conversion
+- **`ColorConvertFilter(source, target)`** - RGB color space conversion via CIE XYZ
+  - Supported: `ColorSpace.BT709`, `ColorSpace.BT2020`, `ColorSpace.DISPLAY_P3`
+  - Requires linear (non-gamma) input
+
+### HDR Encoding/Decoding
+- **`PQEncodeFilter(reference_peak=10000)`** - Apply PQ gamma curve (ST.2084) for HDR10
+- **`PQDecodeFilter(peak_luminance=10000)`** - Decode PQ back to linear luminance
+- **`QuantizeFilter(bit_depth=8)`** - Quantize float → integer (8/10/12/16/32-bit)
+- **`DequantizeFilter(bit_depth=None)`** - Dequantize integer → float
+
+### Color Transformations
+- **`RemoveAlphaFilter()`** - Remove alpha channel (RGBA → RGB)
+- **`GrayscaleFilter(method='luminosity')`** - Convert to grayscale
+- **`NormalizeFilter(min_val=0.0, max_val=1.0)`** - Normalize value range
 
 ### Image Enhancement
 - **`BlurFilter(sigma=1.0)`** - Gaussian blur
-- **`SharpenFilter(strength=1.0)`** - sharpen image
+- **`SharpenFilter(strength=1.0)`** - Sharpen image
 
 ## Supported Formats
 
 ### Reading
-- **TIFF/TIF**: uint8, uint16, uint32, float32, float64
-- **PNG**: uint8, uint16
+- **TIFF/TIF**: uint8, uint16, uint32, float32, float64 (with LZW, Deflate, ZSTD, JPEG compression)
+- **PNG**: uint8, uint16 (with HDR metadata support planned)
+- **AVIF**: uint8, uint10, uint12 with HDR metadata
 - **HDR formats**: EXR, HDR, PFM (float32, float64)
 - **Standard**: JPEG, BMP, WebP, GIF
 
 ### Writing
 - **TIFF**: all data types, compression (LZW, Deflate, ZSTD, JPEG)
-- **PNG**: uint8, uint16 (via pypng for 16-bit)
+- **PNG**: uint8, uint16 (via pypng for 16-bit) with HDR metadata (cICP, mDCv, cLLi chunks)
+- **AVIF**: uint8, uint10, uint12 with HDR10 metadata
+- **WebP**: lossy/lossless modes
 - **HDR**: EXR, HDR, PFM (float32, float64)
-- **Standard**: JPEG, WebP (uint8 only)
+- **Standard**: JPEG (uint8 only)
 
 ## CLI Usage
 
@@ -123,44 +142,88 @@ ImageSaver.save_with_format_conversion(
 # Basic conversion
 python main.py input.tiff output.png
 
-# With quality parameters
-python main.py input.exr output.jpg --quality 90
+# HDR workflow: Scene-referred TIFF → HDR10 AVIF
+python main.py input.tiff output.avif \
+  --filter remove_alpha \
+  --filter color_convert:source=bt709,target=bt2020 \
+  --filter absolute_luminance:paper_white=100 \
+  --filter pq_encode:reference_peak=10000 \
+  --filter quantize:bit_depth=12 \
+  --verbose
 
-# Specify bit depth
-python main.py input.png output.tiff --bit-depth 16
+# List available filters
+python main.py --list-filters
+
+# With quality and compression
+python main.py input.exr output.avif --quality 90 --verbose
 ```
 
 ## Example Workflows
 
-### HDR Photo → SDR Display
+### Scene-Referred HDR → Display-Referred PQ
 
 ```python
-from image_pipeline import FilterPipeline
-from image_pipeline import PQEncodeFilter, QuantizeFilter, NormalizeFilter
+from image_pipeline import FilterPipeline, ImageReader, ImageWriter
+from image_pipeline.filters import (
+    AbsoluteLuminanceFilter,
+    PQEncodeFilter,
+    QuantizeFilter
+)
+
+# Scene-referred linear EXR → Display-referred PQ PNG
+reader = ImageReader('scene_linear.exr')
+img_data = reader.read()
 
 pipeline = FilterPipeline([
-    NormalizeFilter(0, 1),                      # Normalize
-    PQEncodeFilter(peak_luminance=10000),       # PQ encoding
-    QuantizeFilter(bit_depth=8)                 # Convert to uint8
+    AbsoluteLuminanceFilter(paper_white=100),   # Scene → Display (sets MaxCLL/MaxFALL)
+    PQEncodeFilter(reference_peak=10000),       # Apply PQ curve
+    QuantizeFilter(bit_depth=16)                # Convert to uint16
 ])
 
-result = pipeline.apply(hdr_pixels)
+processed = pipeline.apply_to_image_data(img_data)
+
+writer = ImageWriter('output_pq.png', processed)
+writer.write()
 ```
 
-### Batch Processing with Enhancements
+### Round-Trip: Scene → Display → Scene
 
 ```python
-from pathlib import Path
-from image_pipeline import process_image, SharpenFilter, NormalizeFilter
+from image_pipeline.filters import AbsoluteLuminanceFilter, RelativeLuminanceFilter
 
-filters = [
-    NormalizeFilter(),
-    SharpenFilter(strength=0.5)
-]
+# Scene-referred data
+scene_data = reader.read()  # pixel values relative to paper_white
 
-for img_path in Path('input/').glob('*.tiff'):
-    output_path = f'output/{img_path.stem}.png'
-    process_image(str(img_path), output_path, filters)
+# Convert to display-referred (absolute nits)
+abs_filter = AbsoluteLuminanceFilter(paper_white=100)
+display_data = abs_filter.apply(scene_data.pixels)
+# metadata now has: paper_white=100, max_cll, max_fall
+
+# Process in display-referred space...
+# (e.g., tone mapping, color grading)
+
+# Convert back to scene-referred
+rel_filter = RelativeLuminanceFilter(paper_white=100)
+back_to_scene = rel_filter.apply(display_data)
+# metadata preserves: paper_white=100 (no max_cll/max_fall)
+```
+
+### Color Space Conversion for HDR
+
+```python
+from image_pipeline.filters import ColorConvertFilter
+from image_pipeline.types import ColorSpace
+
+# BT.709 → BT.2020 (for HDR delivery)
+pipeline = FilterPipeline([
+    ColorConvertFilter(
+        source=ColorSpace.BT709,
+        target=ColorSpace.BT2020
+    )
+])
+
+# Note: Requires linear (non-gamma) input
+result = pipeline.apply(linear_rgb_pixels)
 ```
 
 ## Architecture
@@ -222,8 +285,12 @@ Dima Teterin (tet.dima.211@gmail.com)
 
 ## Roadmap
 
-- [ ] AVIF format support
-- [ ] Additional color spaces (Lab, XYZ)
-- [ ] Tone mapping operators
+- [x] AVIF format support (completed)
+- [x] Color space conversion (BT.709, BT.2020, Display P3) (completed)
+- [x] Scene/display-referred workflows (completed)
+- [ ] Metadata reading from PNG/AVIF (cICP, mDCv, cLLi chunks)
+- [ ] Tone mapping operators (Reinhard, ACES, etc.)
+- [ ] Brightness/contrast filters with MaxCLL/MaxFALL updates
 - [ ] Batch processing via CLI
 - [ ] Extended metadata (EXIF, ICC profiles)
+- [ ] Additional color spaces (Lab, XYZ direct support)
