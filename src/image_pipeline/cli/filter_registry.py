@@ -14,6 +14,8 @@ from image_pipeline.filters import (
     SharpenFilter,
     BlurFilter,
     ColorConvertFilter,
+    AbsoluteLuminanceFilter,
+    RelativeLuminanceFilter,
 )
 from image_pipeline.filters.base import ImageFilter
 
@@ -29,6 +31,8 @@ FILTER_REGISTRY: Dict[str, Type[ImageFilter]] = {
     'sharpen': SharpenFilter,
     'blur': BlurFilter,
     'color_convert': ColorConvertFilter,
+    'absolute_luminance': AbsoluteLuminanceFilter,
+    'relative_luminance': RelativeLuminanceFilter,
 }
 
 

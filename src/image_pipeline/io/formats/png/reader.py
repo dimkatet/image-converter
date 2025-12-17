@@ -13,21 +13,26 @@ class PNGFormatReader(FormatReader):
     def read(self) -> ImageData:
         """
         Read PNG image
-        
+
         Returns:
             ImageData with pixels and metadata
         """
         try:
             # Read pixels
             pixels = iio.imread(self.filepath)
-            
+
+            # TODO: Read PQ transfer function from cICP chunk
+            # TODO: If PQ detected, decode to linear nits and compute MaxCLL/MaxFALL
+            # TODO: Read mastering display metadata from mDCv chunk
+            # TODO: Read content light level metadata from cLLi chunk
+
             # Minimal metadata - only typed fields
             metadata: ImageMetadata = {
                 'format': 'PNG',
                 'filename': self.filepath.name,
                 'file_size': os.path.getsize(self.filepath),
             }
-            
+
             # ImageData will automatically fill: shape, dtype, channels, bit_depth
             return ImageData(pixels, metadata)
             

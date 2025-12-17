@@ -12,6 +12,8 @@ from .sharpen import SharpenFilter
 from .grayscale import GrayscaleFilter
 
 from .color_convert import ColorConvertFilter
+from .absolute_luminance import AbsoluteLuminanceFilter
+from .relative_luminance import RelativeLuminanceFilter
 
 __all__ = [
     "PQEncodeFilter",
@@ -24,4 +26,6 @@ __all__ = [
     "QuantizeFilter",
     "DequantizeFilter",
     "ColorConvertFilter",
+    "AbsoluteLuminanceFilter",
+    "RelativeLuminanceFilter",
 ]

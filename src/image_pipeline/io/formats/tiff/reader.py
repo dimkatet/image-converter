@@ -20,14 +20,22 @@ class TiffFormatReader(FormatReader):
         """
         try:
             pixels = tifffile.imread(self.filepath)
-
             with tifffile.TiffFile(self.filepath) as tif:
                 metadata: ImageMetadata = {
                     'format': 'TIFF',
                     'filename': self.filepath.name,
                     'file_size': os.path.getsize(self.filepath),
                 }
-            
+
+                # TODO: Auto-detect paper_white from TIFF tags for scene-referred HDR
+                # Scene-referred TIFF files encode linear values relative to a paper white
+                # (typically 100 nits). Consider reading relevant EXIF/TIFF tags:
+                # - WhitePoint tag (chromaticity)
+                # - Photometric interpretation
+                # - Color space metadata
+                # - Custom tags for luminance reference
+                # Then set metadata['paper_white'] = detected_value
+
             return ImageData(pixels, metadata)
             
         except Exception as e:

@@ -30,23 +30,29 @@ class ImageMetadata(TypedDict, total=False):
     dtype: str
     channels: int
     bit_depth: int
-    
+
     # === File information ===
     format: str              # 'PNG', 'TIFF', 'EXR', etc.
     filename: str            # Original filename
     file_size: int           # File size in bytes
-    
+
     # === Fields from filters ===
     transfer_function: TransferFunction
     color_space: Optional[ColorSpace]
     color_primaries: Optional[dict[str, tuple[float, float]]]  # {'red': (x, y), 'green': ..., 'blue': ..., 'white': ...}
-    
+
     # === HDR parameters (optional) ===
-    peak_luminance: float      # nits
-    min_luminance: float       # nits
-    max_cll: int              # Maximum Content Light Level, nits
-    max_fall: int             # Maximum Frame Average Light Level, nits
-    
+    # Scene reference:
+    paper_white: float                          # Reference white level, nits (describes the scene's white point)
+
+    # Mastering display (from mDCv chunk or manual):
+    mastering_display_max_luminance: float      # Reference display peak brightness, nits
+    mastering_display_min_luminance: float      # Reference display black level, nits
+
+    # Content light levels (computed or from cLLi chunk, for HDR10 signaling):
+    max_cll: int                                # Maximum Content Light Level, nits (display-referred only)
+    max_fall: int                               # Maximum Frame Average Light Level, nits (display-referred only)
+
     # === Text metadata ===
     text: dict[str, str]      # Arbitrary key-value pairs for tEXt chunks
 
