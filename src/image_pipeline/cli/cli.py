@@ -7,6 +7,7 @@ import sys
 from image_pipeline.core.processor import process_image
 from image_pipeline.cli.filter_parser import parse_filters
 from image_pipeline.cli.filter_registry import FILTER_REGISTRY
+from image_pipeline.cli.options_parser import parse_options
 from image_pipeline.types import SaveOptions
 
 
@@ -33,16 +34,27 @@ Examples:
     --filter pq_encode:peak_luminance=10000 \\
     --filter blur:sigma=2.5 \\
     --filter quantize:bit_depth=16 \\
-    --quality 90 \\
+    --option quality=90 \\
     output.png
 
-  # Complex pipeline
+  # Complex pipeline with save options
   python main.py input.tif \\
     --filter normalize:min_val=0.0,max_val=1.0 \\
     --filter grayscale:method=luminosity \\
     --filter sharpen:strength=1.5 \\
+    --option quality=95 \\
     --verbose \\
     output.jpg
+
+  # PNG with compression settings
+  python main.py input.png output.png \\
+    --option compression_level=9 \\
+    --option strategy=3
+
+  # WebP lossless encoding
+  python main.py input.png output.webp \\
+    --option lossless=true \\
+    --option method=6
 
 Available filters:
   remove_alpha, normalize, pq_encode, pq_decode, grayscale,
@@ -74,19 +86,13 @@ For filter details:
     )
     
     parser.add_argument(
-        "--quality",
-        type=int,
-        metavar='N',
-        help="Quality for lossy formats (1-100)"
+        "--option", "-o",
+        action='append',
+        dest='options',
+        metavar='KEY=VALUE',
+        help="Save option in key=value format (e.g., --option strategy=3 --option lossless=true). Can be specified multiple times."
     )
-    
-    parser.add_argument(
-        "--compression",
-        type=int,
-        metavar='N',
-        help="Compression level (format-dependent)"
-    )
-    
+
     parser.add_argument(
         "--verbose", "-v",
         action='store_true',
@@ -134,13 +140,13 @@ def main():
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    
-    # Prepare save options
-    save_options: SaveOptions = {}
-    if args.quality is not None:
-        save_options['quality'] = args.quality
-    if args.compression is not None:
-        save_options['compression_level'] = args.compression
+
+    # Parse save options from --option flags
+    try:
+        save_options: SaveOptions = parse_options(args.options) if args.options else {}
+    except ValueError as e:
+        print(f"Error parsing options: {e}", file=sys.stderr)
+        sys.exit(1)
     
     # Process image
     try:
