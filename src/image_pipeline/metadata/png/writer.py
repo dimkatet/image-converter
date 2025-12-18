@@ -39,11 +39,14 @@ class PNGMetadataWriter(MetadataWriter):
             codec = PNGMetadataCodec(filepath)
             codec.read_chunks()
 
-            # Step 3: Add HDR metadata chunks
-            codec.set_hdr_metadata(
+            # Step 3: Add metadata chunks
+            codec.set_metadata_chunks(
                 cicp=chunks.get('cicp'),
                 mdcv=chunks.get('mdcv'),
                 clli=chunks.get('clli'),
+                chrm=chunks.get('chrm'),
+                gama=chunks.get('gama'),
+                srgb=chunks.get('srgb'),
                 gmap=chunks.get('gmap'),
                 gdat=chunks.get('gdat')
             )

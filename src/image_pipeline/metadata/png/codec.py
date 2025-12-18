@@ -82,6 +82,34 @@ class CLLIData:
 
 
 @dataclass
+class CHRMData:
+    """cHRM chunk data - Chromaticity coordinates (standard PNG chunk)"""
+    # White point in 1/100000 units
+    white_point_x: int
+    white_point_y: int
+
+    # Primary chromaticities in 1/100000 units
+    red_x: int
+    red_y: int
+    green_x: int
+    green_y: int
+    blue_x: int
+    blue_y: int
+
+
+@dataclass
+class SRGBData:
+    """sRGB chunk data - sRGB rendering intent (standard PNG chunk)"""
+    rendering_intent: int  # 0=Perceptual, 1=Relative, 2=Saturation, 3=Absolute
+
+    # Common values:
+    # 0 = Perceptual (default for images)
+    # 1 = Relative colorimetric (preserves in-gamut colors)
+    # 2 = Saturation (vivid colors, for graphics)
+    # 3 = Absolute colorimetric (for proofing)
+
+
+@dataclass
 class GMAPData:
     """gMAP chunk data - Gain Map parameters"""
     version: int                    # Version (currently 0)
@@ -241,7 +269,13 @@ class PNGMetadataCodec:
             
             elif chunk.chunk_type == ChunkType.GAMA.value:
                 metadata['gamma'] = self._parse_gama_chunk(chunk.data)
-            
+
+            elif chunk.chunk_type == ChunkType.CHRM.value:
+                metadata['chrm'] = self._parse_chrm_chunk(chunk.data)
+
+            elif chunk.chunk_type == ChunkType.SRGB.value:
+                metadata['srgb'] = self._parse_srgb_chunk(chunk.data)
+
             # HDR chunks
             elif chunk.chunk_type == ChunkType.CICP.value:
                 metadata['cicp'] = self._parse_cicp_chunk(chunk.data)
@@ -287,59 +321,66 @@ class PNGMetadataCodec:
             self._chunks.insert(insert_pos, chunk)
             insert_pos += 1
     
-    def set_hdr_metadata(self, 
-                        cicp: Optional[CICPData] = None,
-                        mdcv: Optional[MDCVData] = None,
-                        clli: Optional[CLLIData] = None,
-                        gmap: Optional[GMAPData] = None,
-                        gdat: Optional[bytes] = None) -> None:
+    def set_metadata_chunks(self,
+                           cicp: Optional[CICPData] = None,
+                           mdcv: Optional[MDCVData] = None,
+                           clli: Optional[CLLIData] = None,
+                           chrm: Optional[CHRMData] = None,
+                           gama: Optional[float] = None,
+                           srgb: Optional[SRGBData] = None,
+                           gmap: Optional[GMAPData] = None,
+                           gdat: Optional[bytes] = None) -> None:
         """
-        Set HDR metadata chunks
-        
+        Set metadata chunks (HDR and color-related)
+
         Args:
             cicp: Coding-independent code points
             mdcv: Mastering Display Color Volume
             clli: Content Light Level Information
+            chrm: Chromaticity coordinates (standard PNG chunk)
+            gama: Gamma value (float, e.g., 2.2)
+            srgb: sRGB rendering intent (standard PNG chunk)
             gmap: Gain Map parameters
             gdat: Gain Map data (raw bytes)
+
+        Note:
+            According to PNG spec, if sRGB is present, gAMA and cHRM should be ignored.
+            This method writes all provided chunks - decoders handle precedence.
         """
-        # Remove existing HDR chunks
-        self._chunks = [
-            c for c in self._chunks 
-            if c.chunk_type not in {
-                ChunkType.CICP.value, ChunkType.MDCV.value, 
-                ChunkType.CLLI.value, ChunkType.GMAP.value, ChunkType.GDAT.value
-            }
-        ]
-        
+        # Remove existing metadata chunks
+        chunk_types_to_remove = {
+            ChunkType.CICP.value, ChunkType.MDCV.value,
+            ChunkType.CLLI.value, ChunkType.CHRM.value,
+            ChunkType.GAMA.value, ChunkType.SRGB.value,
+            ChunkType.GMAP.value, ChunkType.GDAT.value
+        }
+        self._chunks = [c for c in self._chunks if c.chunk_type not in chunk_types_to_remove]
+
         # Find position to insert (after IHDR, before IDAT)
         insert_pos = self._find_metadata_insert_position()
-        
-        # Create and insert chunks
-        if cicp:
-            chunk = self._create_cicp_chunk(cicp)
-            self._chunks.insert(insert_pos, chunk)
-            insert_pos += 1
-        
-        if mdcv:
-            chunk = self._create_mdcv_chunk(mdcv)
-            self._chunks.insert(insert_pos, chunk)
-            insert_pos += 1
-        
-        if clli:
-            chunk = self._create_clli_chunk(clli)
-            self._chunks.insert(insert_pos, chunk)
-            insert_pos += 1
-        
-        if gmap:
-            chunk = self._create_gmap_chunk(gmap)
-            self._chunks.insert(insert_pos, chunk)
-            insert_pos += 1
-        
-        if gdat:
+
+        # Define chunks to insert with their creators
+        chunks_to_insert = [
+            (srgb, self._create_srgb_chunk),      # sRGB first (highest priority)
+            (gama, self._create_gama_chunk),      # gAMA second
+            (chrm, self._create_chrm_chunk),      # cHRM third
+            (cicp, self._create_cicp_chunk),      # cICP (newer standard)
+            (mdcv, self._create_mdcv_chunk),
+            (clli, self._create_clli_chunk),
+            (gmap, self._create_gmap_chunk),
+        ]
+
+        # Insert all chunks
+        for data, creator in chunks_to_insert:
+            if data is not None:
+                chunk = creator(data)
+                self._chunks.insert(insert_pos, chunk)
+                insert_pos += 1
+
+        # Handle gdat separately (raw bytes, no creator function)
+        if gdat is not None:
             chunk = PNGChunk(chunk_type=ChunkType.GDAT.value, data=gdat)
             self._chunks.insert(insert_pos, chunk)
-            insert_pos += 1
     
     def _find_metadata_insert_position(self) -> int:
         """Finds position to insert metadata (after IHDR)"""
@@ -446,10 +487,48 @@ class PNGMetadataCodec:
         """Parse gAMA chunk"""
         if len(data) < 4:
             return 0.0
-        
+
         gamma_int = struct.unpack('>I', data)[0]
         return gamma_int / 100000.0
-    
+
+    def _parse_chrm_chunk(self, data: bytes) -> Dict[str, Any]:
+        """Parse cHRM chunk - Chromaticity coordinates"""
+        if len(data) < 32:
+            return {}
+
+        # Parse 8 uint32 values: white point (x, y), red (x, y), green (x, y), blue (x, y)
+        values = struct.unpack('>8I', data[:32])
+
+        # Convert from 1/100000 units to float
+        def to_float(val: int) -> float:
+            return val / 100000.0
+
+        return {
+            'white_point': (to_float(values[0]), to_float(values[1])),
+            'red': (to_float(values[2]), to_float(values[3])),
+            'green': (to_float(values[4]), to_float(values[5])),
+            'blue': (to_float(values[6]), to_float(values[7]))
+        }
+
+    def _parse_srgb_chunk(self, data: bytes) -> Dict[str, Any]:
+        """Parse sRGB chunk - sRGB rendering intent"""
+        if len(data) < 1:
+            return {}
+
+        rendering_intent = data[0]
+
+        intent_names = {
+            0: 'Perceptual',
+            1: 'Relative colorimetric',
+            2: 'Saturation',
+            3: 'Absolute colorimetric'
+        }
+
+        return {
+            'rendering_intent': rendering_intent,
+            'rendering_intent_name': intent_names.get(rendering_intent, f'Unknown ({rendering_intent})')
+        }
+
     # === HDR chunk parsers ===
     
     def _parse_cicp_chunk(self, data: bytes) -> Dict[str, Any]:
@@ -608,7 +687,32 @@ class PNGMetadataCodec:
             clli.max_frame_average_light_level
         )
         return PNGChunk(chunk_type=ChunkType.CLLI.value, data=data)
-    
+
+    def _create_chrm_chunk(self, chrm: CHRMData) -> PNGChunk:
+        """Create cHRM chunk - Chromaticity coordinates"""
+        # Pack 8 uint32 values: white point (x, y), red (x, y), green (x, y), blue (x, y)
+        data = struct.pack('>8I',
+            chrm.white_point_x, chrm.white_point_y,
+            chrm.red_x, chrm.red_y,
+            chrm.green_x, chrm.green_y,
+            chrm.blue_x, chrm.blue_y
+        )
+        return PNGChunk(chunk_type=ChunkType.CHRM.value, data=data)
+
+    def _create_gama_chunk(self, gamma: float) -> PNGChunk:
+        """Create gAMA chunk - Gamma value"""
+        # Convert gamma to uint32 (gamma * 100000)
+        gamma_int = int(round(gamma * 100000))
+        gamma_int = max(0, min(4294967295, gamma_int))  # Clamp to uint32 range
+        data = struct.pack('>I', gamma_int)
+        return PNGChunk(chunk_type=ChunkType.GAMA.value, data=data)
+
+    def _create_srgb_chunk(self, srgb: SRGBData) -> PNGChunk:
+        """Create sRGB chunk - sRGB rendering intent"""
+        # Single byte: rendering intent (0-3)
+        data = struct.pack('B', srgb.rendering_intent)
+        return PNGChunk(chunk_type=ChunkType.SRGB.value, data=data)
+
     def _create_gmap_chunk(self, gmap: GMAPData) -> PNGChunk:
         """Create gMAP chunk"""
         # Convert float to int (stored as 1/256 units)

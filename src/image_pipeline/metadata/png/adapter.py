@@ -9,7 +9,7 @@ from image_pipeline.constants import (
     TRANSFER_TO_CICP,
     COLORSPACE_TO_CICP,
 )
-from .codec import CICPData, MDCVData, CLLIData
+from .codec import CICPData, MDCVData, CLLIData, CHRMData, SRGBData
 
 
 class PNGMetadataAdapter:
@@ -28,20 +28,29 @@ class PNGMetadataAdapter:
             Only includes chunks for which sufficient data is available
         """
         chunks = {}
-        
-        PNGMetadataAdapter._maybe_add_chunk(chunks, 'cicp', 
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'cicp',
             PNGMetadataAdapter._to_cicp(metadata))
-        
-        PNGMetadataAdapter._maybe_add_chunk(chunks, 'mdcv', 
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'mdcv',
             PNGMetadataAdapter._to_mdcv(metadata))
-        
-        PNGMetadataAdapter._maybe_add_chunk(chunks, 'clli', 
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'clli',
             PNGMetadataAdapter._to_clli(metadata))
-        
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'chrm',
+            PNGMetadataAdapter._to_chrm(metadata))
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'gama',
+            PNGMetadataAdapter._to_gama(metadata))
+
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'srgb',
+            PNGMetadataAdapter._to_srgb(metadata))
+
         # Text metadata (если есть)
         if 'text' in metadata and metadata['text']:
             chunks['text'] = metadata['text']
-        
+
         return chunks
     
     @staticmethod
@@ -156,17 +165,99 @@ class PNGMetadataAdapter:
     def _to_clli(metadata: ImageMetadata) -> Optional[CLLIData]:
         """
         Generate cLLi chunk from metadata
-        
+
         Requires: max_cll AND max_fall
         """
         max_cll = metadata.get('max_cll')
         max_fall = metadata.get('max_fall')
-        
+
         # Оба значения должны быть указаны
         if max_cll is None or max_fall is None:
             return None
-        
+
         return CLLIData(
             max_content_light_level=max_cll,
             max_frame_average_light_level=max_fall
         )
+
+    @staticmethod
+    def _to_chrm(metadata: ImageMetadata) -> Optional[CHRMData]:
+        """
+        Generate cHRM chunk from metadata
+
+        Requires: color_space OR color_primaries
+        cHRM is a standard PNG chunk for chromaticity coordinates
+        """
+        # Получаем primaries - приоритет custom, иначе standard
+        primaries = metadata.get('color_primaries')
+        color_space = metadata.get('color_space')
+
+        if not primaries:
+            if not color_space:
+                return None
+            primaries = STANDARD_COLOR_PRIMARIES.get(color_space)
+
+        # Если primaries не определены - не создаём chunk
+        if not primaries:
+            return None
+
+        # Конвертируем координаты в формат cHRM (умножаем на 100000)
+        def to_chrm_coord(value: float) -> int:
+            result = int(round(value * 100000))
+            return max(0, min(4294967295, result))  # uint32 range
+
+        return CHRMData(
+            white_point_x=to_chrm_coord(primaries['white'][0]),
+            white_point_y=to_chrm_coord(primaries['white'][1]),
+            red_x=to_chrm_coord(primaries['red'][0]),
+            red_y=to_chrm_coord(primaries['red'][1]),
+            green_x=to_chrm_coord(primaries['green'][0]),
+            green_y=to_chrm_coord(primaries['green'][1]),
+            blue_x=to_chrm_coord(primaries['blue'][0]),
+            blue_y=to_chrm_coord(primaries['blue'][1])
+        )
+
+    @staticmethod
+    def _to_gama(metadata: ImageMetadata) -> Optional[float]:
+        """
+        Generate gAMA chunk from metadata
+
+        Returns gamma value for PNG gAMA chunk.
+        Note: PNG gAMA stores the file gamma (encoding gamma), which is 1/display_gamma.
+        So if display gamma is 2.2, we store 1/2.2 ≈ 0.4545.
+
+        However, for consistency with other tools, we accept display gamma in metadata
+        and convert it here.
+        """
+        # Check if there's an explicit gamma value in metadata
+        gamma = metadata.get('gamma')
+        if gamma is not None:
+            # Metadata stores display gamma, convert to file gamma
+            return float(gamma)
+
+        # For sRGB transfer function, use approximate gamma 2.2
+        transfer_function = metadata.get('transfer_function')
+        if transfer_function and transfer_function.value == 'sRGB':
+            return 2.2  # Will be stored as 1/2.2 in PNG by codec
+
+        return None
+
+    @staticmethod
+    def _to_srgb(metadata: ImageMetadata) -> Optional[SRGBData]:
+        """
+        Generate sRGB chunk from metadata
+
+        Creates sRGB chunk if transfer_function is sRGB.
+        Default rendering intent: 0 (Perceptual).
+        """
+        transfer_function = metadata.get('transfer_function')
+
+        # Only generate sRGB chunk for sRGB transfer function
+        if not transfer_function or transfer_function.value != 'sRGB':
+            return None
+
+        # Default to Perceptual (0) rendering intent
+        # Could be extended to check metadata for specific intent
+        rendering_intent = 0  # Perceptual
+
+        return SRGBData(rendering_intent=rendering_intent)
