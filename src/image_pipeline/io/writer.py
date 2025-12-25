@@ -82,6 +82,7 @@ class ImageWriter:
 from .formats.png import PNGFormatWriter
 from .formats.avif import AVIFFormatWriter
 from .formats.webp import WebPFormatWriter
+from .formats.jpeg import JPEGWriter
 
 ImageWriter.register_format(
     extensions=['.png'],
@@ -96,4 +97,9 @@ ImageWriter.register_format(
 ImageWriter.register_format(
     extensions=['.webp'],
     writer_class=WebPFormatWriter
+)
+
+ImageWriter.register_format(
+    extensions=['.jpg', '.jpeg'],
+    writer_class=JPEGWriter
 )

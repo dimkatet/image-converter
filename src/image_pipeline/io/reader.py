@@ -96,3 +96,11 @@ ImageReader.register_format(
     extensions=['.webp'],
     reader_class=WebPFormatReader
 )
+
+# JPEG - automatically detects standard JPEG vs Ultra HDR
+from image_pipeline.io.formats.jpeg import JPEGReader
+
+ImageReader.register_format(
+    extensions=['.jpg', '.jpeg'],
+    reader_class=JPEGReader
+)

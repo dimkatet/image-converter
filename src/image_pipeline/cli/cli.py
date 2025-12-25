@@ -56,6 +56,16 @@ Examples:
     --option lossless=true \\
     --option method=6
 
+  # JPEG Ultra HDR encoding (scene-referred LINEAR data)
+  python main.py input.tiff output.jpg \\
+    --ultra-hdr \\
+    --filter remove_alpha \\
+    --filter color_convert:source=bt709,target=bt2020 \\
+    --option quality=95
+
+  # Note: Do NOT use AbsoluteLuminanceFilter or PQEncodeFilter
+  #       libultrahdr handles encoding internally
+
 Available filters:
   remove_alpha, normalize, pq_encode, pq_decode, grayscale,
   quantize, dequantize, sharpen, blur
@@ -98,7 +108,13 @@ For filter details:
         action='store_true',
         help="Print detailed processing information"
     )
-    
+
+    parser.add_argument(
+        "--ultra-hdr",
+        action='store_true',
+        help="Enable JPEG Ultra HDR encoding for .jpg/.jpeg output (requires HDR metadata)"
+    )
+
     parser.add_argument(
         "--list-filters",
         action='store_true',
@@ -147,7 +163,11 @@ def main():
     except ValueError as e:
         print(f"Error parsing options: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
+    # Add --ultra-hdr flag to save options
+    if args.ultra_hdr:
+        save_options['ultra_hdr'] = True
+
     # Process image
     try:
         process_image(

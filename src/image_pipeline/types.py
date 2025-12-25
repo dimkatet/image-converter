@@ -90,19 +90,26 @@ class SaveOptions(TypedDict, total=False):
         - lossless (bool, default: False)
         - speed (0-10, faster vs better, default: 6)
         - bit_depth (8, 10, 12)
+
+    JPEG Ultra HDR:
+        - ultra_hdr (bool, default: False) - Enable Ultra HDR encoding
+        - quality (1-100, default: 95)
+        - gainmap_scale (int, default: 4) - Gainmap downscale factor
     """
     # Compression/Quality
     quality: int              # 1-100, for lossy formats (JPEG, WebP, AVIF)
     compression_level: int    # 0-9, for PNG
     compression: str          # Compression type for TIFF ('none', 'lzw', 'jpeg', etc.)
-    
+
     # Format-specific flags
     optimize: bool            # Optimize encoding (JPEG, PNG)
     progressive: bool         # Progressive encoding (JPEG)
     lossless: bool           # Lossless mode (WebP, AVIF)
-    
+    ultra_hdr: bool          # Enable JPEG Ultra HDR encoding (JPEG only)
+
     # Advanced
     method: int              # Encoding method/speed (WebP: 0-6, AVIF: 0-10)
     speed: int               # Encoding speed for AVIF (0-10)
     bit_depth: int           # Bit depth for output (AVIF: 8, 10, 12)
     subsampling: str         # Chroma subsampling (JPEG: '4:4:4', '4:2:2', '4:2:0')
+    gainmap_scale: int       # Gainmap downscale factor for JPEG Ultra HDR (default: 4)
