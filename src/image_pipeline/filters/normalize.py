@@ -1,4 +1,4 @@
-from image_pipeline.core.image_data import ImageData
+from typing import Optional
 
 import numpy as np
 from .base import ImageFilter
@@ -7,7 +7,7 @@ from .base import ImageFilter
 class NormalizeFilter(ImageFilter):
     """Filter for normalizing pixel values to a given range"""
     
-    def __init__(self, min_val: float = 0.0, max_val: float = 1.0):
+    def __init__(self, min_val: float = 0.0, max_val: float = 1.0, min_in: Optional[float] = None, max_in: Optional[float] = None):
         """
         Args:
             min_val: Minimum value of the output range
@@ -15,6 +15,8 @@ class NormalizeFilter(ImageFilter):
         """
         self.min_val = min_val
         self.max_val = max_val
+        self.min_in = min_in
+        self.max_in = max_in
         super().__init__()
     
     def validate_params(self) -> None:
@@ -36,9 +38,8 @@ class NormalizeFilter(ImageFilter):
     
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
-        
-        pix_min = pixels.min()
-        pix_max = pixels.max()
+        pix_min = self.min_in if self.min_in is not None else pixels.min()
+        pix_max = self.max_in if self.max_in is not None else pixels.max()
         
         if pix_max == pix_min:
             return np.full_like(pixels, self.min_val, dtype=np.float32)

@@ -74,9 +74,7 @@ class PQDecodeFilter(ImageFilter):
     
     def update_metadata(self, img_data: ImageData) -> None:
         super().update_metadata(img_data)
-        # After PQ decoding, values are linear
         img_data.metadata['transfer_function'] = TransferFunction.LINEAR
-        img_data.metadata['peak_luminance'] = self.peak_luminance
     
     def __repr__(self) -> str:
         return f"PQDecodeFilter(peak_luminance={self.peak_luminance})"

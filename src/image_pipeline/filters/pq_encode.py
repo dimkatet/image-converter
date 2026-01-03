@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 
 from image_pipeline.core.image_data import ImageData
-from image_pipeline.types import ColorSpace, TransferFunction
+from image_pipeline.types import TransferFunction
 from .base import ImageFilter
 
 

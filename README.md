@@ -257,6 +257,20 @@ image_pipeline/
 
 ## Development
 
+### Type Checking
+
+The project uses Pyright for static type checking:
+
+```bash
+# Install dev dependencies (includes Pyright)
+pip install -e ".[dev]"
+
+# Run type checker
+pyright
+
+# Pyright checks only src/ directory (configured in pyproject.toml)
+```
+
 ### Creating Custom Filters
 
 ```python

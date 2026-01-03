@@ -52,7 +52,7 @@ class JPEGWriter(FormatWriter):
         adapted_options = JPEGSaveOptionsAdapter.adapt(options)
 
         # Delegate based on ultra_hdr flag
-        if adapted_options['ultra_hdr']:
+        if adapted_options.get('ultra_hdr'):
             # Use Ultra HDR implementation
             from .ultrahdr import UltraHDRWriter
             writer = UltraHDRWriter(str(self.filepath))

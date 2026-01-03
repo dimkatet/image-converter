@@ -1,5 +1,3 @@
-from image_pipeline.core.image_data import ImageData
-    
 import numpy as np
 from scipy import ndimage
 

@@ -23,5 +23,21 @@ dependencies = [
     "imagecodecs"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pyright"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+include = ["src"]
+exclude = ["**/__pycache__", "venv", "build", "dist"]
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedVariable = true
+reportDuplicateImport = true

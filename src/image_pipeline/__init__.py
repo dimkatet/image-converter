@@ -12,6 +12,7 @@ from .filters import (
     SharpenFilter,
     BlurFilter,
     ColorConvertFilter,
+    ToneMappingFilter,
 )
 
 from .io.reader import ImageReader
@@ -30,6 +31,7 @@ __all__ = [
     "SharpenFilter",
     "BlurFilter",
     "ColorConvertFilter",
+    "ToneMappingFilter",
     "ImageReader",
     "ImageWriter",
 ]

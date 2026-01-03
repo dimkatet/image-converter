@@ -1,6 +1,5 @@
 from typing import List
 from typing import Optional
-import numpy as np
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.filters.base import ImageFilter

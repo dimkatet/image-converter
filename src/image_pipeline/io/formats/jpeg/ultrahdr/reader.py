@@ -6,7 +6,7 @@ import numpy as np
 import imagecodecs
 
 from image_pipeline.core.image_data import ImageData
-from image_pipeline.types import TransferFunction, ColorSpace
+from image_pipeline.types import TransferFunction
 from image_pipeline.io.formats.base import FormatReader
 
 

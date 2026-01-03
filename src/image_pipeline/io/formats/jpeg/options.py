@@ -2,7 +2,6 @@
 Save options adapter for JPEG format (standard and Ultra HDR)
 """
 
-from typing import Any
 from image_pipeline.types import SaveOptions
 
 
@@ -32,7 +31,7 @@ class JPEGSaveOptionsAdapter:
     }
 
     @classmethod
-    def adapt(cls, options: SaveOptions) -> dict[str, Any]:
+    def adapt(cls, options: SaveOptions) -> SaveOptions:
         """
         Validate and adapt save options for JPEG encoding
 
@@ -45,7 +44,7 @@ class JPEGSaveOptionsAdapter:
         Raises:
             ValueError: If option values are invalid
         """
-        adapted: dict[str, Any] = {}
+        adapted: SaveOptions = {}
 
         # Quality
         quality = options.get('quality', cls.DEFAULTS['quality'])

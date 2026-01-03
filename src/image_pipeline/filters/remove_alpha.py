@@ -1,6 +1,5 @@
 import numpy as np
 
-from image_pipeline.core.image_data import ImageData
 from .base import ImageFilter
 
 

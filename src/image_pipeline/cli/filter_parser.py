@@ -2,7 +2,7 @@
 Filter parser for CLI
 Parses filter strings like 'blur:sigma=2.5' into filter objects
 """
-from typing import List, Dict, Any
+from typing import List, Any
 
 from image_pipeline.filters.base import ImageFilter
 from .filter_registry import FILTER_REGISTRY, get_available_filters

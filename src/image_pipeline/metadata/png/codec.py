@@ -437,10 +437,10 @@ class PNGMetadataCodec:
             return "", ""
         
         keyword = data[:null_pos].decode('latin-1')
-        
+
         compression_flag = data[null_pos + 1]
-        compression_method = data[null_pos + 2]
-        
+        _ = data[null_pos + 2]  # compression_method (unused)
+
         rest = data[null_pos + 3:]
         lang_null = rest.find(b'\x00')
         if lang_null == -1:

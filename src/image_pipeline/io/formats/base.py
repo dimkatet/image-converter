@@ -3,7 +3,7 @@ Base classes for format-specific readers and writers
 """
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Mapping, Optional, TypedDict
+from typing import Any, Mapping
 import warnings
 
 from image_pipeline.core.image_data import ImageData

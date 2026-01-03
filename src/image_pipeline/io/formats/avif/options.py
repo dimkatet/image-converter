@@ -2,7 +2,6 @@
 AVIF save options adapter
 """
 from typing import TypedDict
-import warnings
 
 from image_pipeline.io.formats.base import SaveOptionsAdapter
 from image_pipeline.types import SaveOptions

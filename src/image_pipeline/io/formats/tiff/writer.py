@@ -1,8 +1,4 @@
 """PNG format writer"""
-import numpy as np
-import imageio.v3 as iio
-import png as pypng
-
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatWriter
 

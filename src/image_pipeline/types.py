@@ -2,7 +2,7 @@
 Type definitions for image pipeline
 """
 from enum import Enum
-from typing import TypedDict, Optional, Any
+from typing import TypedDict, Optional
 
 
 class TransferFunction(Enum):
