@@ -16,6 +16,7 @@ from image_pipeline.filters import (
     ColorConvertFilter,
     AbsoluteLuminanceFilter,
     RelativeLuminanceFilter,
+    ToneMappingFilter,
 )
 from image_pipeline.filters.base import ImageFilter
 
@@ -33,6 +34,7 @@ FILTER_REGISTRY: Dict[str, Type[ImageFilter]] = {
     'color_convert': ColorConvertFilter,
     'absolute_luminance': AbsoluteLuminanceFilter,
     'relative_luminance': RelativeLuminanceFilter,
+    'tonemap': ToneMappingFilter,
 }
 
 
