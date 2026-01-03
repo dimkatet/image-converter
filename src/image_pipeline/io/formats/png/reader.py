@@ -94,6 +94,12 @@ class PNGFormatReader(FormatReader):
                 metadata['mastering_display_max_luminance'] = mdcv['max_luminance_nits']
                 metadata['mastering_display_min_luminance'] = mdcv['min_luminance_nits']
 
+            # Extract ICC profile
+            if 'icc_profile' in chunk_metadata:
+                icc_profile = chunk_metadata['icc_profile']
+                if icc_profile:  # Only add if not None
+                    metadata['icc_profile'] = icc_profile
+
         except Exception:
             # If metadata reading fails, continue with basic metadata
             # Don't crash the whole read operation

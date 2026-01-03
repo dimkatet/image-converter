@@ -47,6 +47,9 @@ class PNGMetadataAdapter:
         PNGMetadataAdapter._maybe_add_chunk(chunks, 'srgb',
             PNGMetadataAdapter._to_srgb(metadata))
 
+        PNGMetadataAdapter._maybe_add_chunk(chunks, 'iccp',
+            PNGMetadataAdapter._to_iccp(metadata))
+
         # Text metadata (если есть)
         if 'text' in metadata and metadata['text']:
             chunks['text'] = metadata['text']
@@ -78,10 +81,7 @@ class PNGMetadataAdapter:
         
         # Color primaries - приоритет color_primaries, потом color_space
         color_primaries_code = 2  # Default: unspecified
-        if metadata.get('color_primaries'):
-            # Если указаны кастомные primaries, ставим 2 (unspecified/custom)
-            color_primaries_code = 2
-        elif color_space:
+        if color_space:
             color_primaries_code = COLORSPACE_TO_CICP.get(color_space, 2)
         
         # Matrix coefficients - для RGB всегда 0 (Identity)
@@ -261,3 +261,12 @@ class PNGMetadataAdapter:
         rendering_intent = 0  # Perceptual
 
         return SRGBData(rendering_intent=rendering_intent)
+
+    @staticmethod
+    def _to_iccp(metadata: ImageMetadata) -> Optional[bytes]:
+        """
+        Extract ICC profile from metadata
+
+        Returns raw ICC profile binary data if present.
+        """
+        return metadata.get('icc_profile')

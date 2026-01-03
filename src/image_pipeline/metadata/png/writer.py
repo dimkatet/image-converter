@@ -47,6 +47,7 @@ class PNGMetadataWriter(MetadataWriter):
                 chrm=chunks.get('chrm'),
                 gama=chunks.get('gama'),
                 srgb=chunks.get('srgb'),
+                iccp=chunks.get('iccp'),
                 gmap=chunks.get('gmap'),
                 gdat=chunks.get('gdat')
             )

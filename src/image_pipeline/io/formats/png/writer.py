@@ -30,6 +30,21 @@ class PNGFormatWriter(FormatWriter):
         # Validate options
         validated_options = self.options_adapter.validate(options)
 
+        # Load ICC profile from file if specified in options
+        if 'icc_profile' in validated_options:
+            icc_path = validated_options['icc_profile']
+            try:
+                with open(icc_path, 'rb') as f:
+                    icc_data = f.read()
+                # Add to metadata (overrides any existing profile)
+                img_data.metadata['icc_profile'] = icc_data
+            except Exception as e:
+                import warnings
+                warnings.warn(
+                    f"Failed to load ICC profile from {icc_path}: {e}",
+                    UserWarning
+                )
+
         # Step 1: Encode and write pixels
         self._write_pixels(img_data.pixels, validated_options)
 

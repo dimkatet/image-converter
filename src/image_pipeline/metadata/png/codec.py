@@ -276,6 +276,9 @@ class PNGMetadataCodec:
             elif chunk.chunk_type == ChunkType.SRGB.value:
                 metadata['srgb'] = self._parse_srgb_chunk(chunk.data)
 
+            elif chunk.chunk_type == ChunkType.ICCP.value:
+                metadata['icc_profile'] = self._parse_iccp_chunk(chunk.data)
+
             # HDR chunks
             elif chunk.chunk_type == ChunkType.CICP.value:
                 metadata['cicp'] = self._parse_cicp_chunk(chunk.data)
@@ -328,6 +331,7 @@ class PNGMetadataCodec:
                            chrm: Optional[CHRMData] = None,
                            gama: Optional[float] = None,
                            srgb: Optional[SRGBData] = None,
+                           iccp: Optional[bytes] = None,
                            gmap: Optional[GMAPData] = None,
                            gdat: Optional[bytes] = None) -> None:
         """
@@ -340,11 +344,13 @@ class PNGMetadataCodec:
             chrm: Chromaticity coordinates (standard PNG chunk)
             gama: Gamma value (float, e.g., 2.2)
             srgb: sRGB rendering intent (standard PNG chunk)
+            iccp: ICC color profile (raw binary data)
             gmap: Gain Map parameters
             gdat: Gain Map data (raw bytes)
 
         Note:
             According to PNG spec, if sRGB is present, gAMA and cHRM should be ignored.
+            If iCCP is present, sRGB, gAMA, and cHRM should be ignored.
             This method writes all provided chunks - decoders handle precedence.
         """
         # Remove existing metadata chunks
@@ -352,6 +358,7 @@ class PNGMetadataCodec:
             ChunkType.CICP.value, ChunkType.MDCV.value,
             ChunkType.CLLI.value, ChunkType.CHRM.value,
             ChunkType.GAMA.value, ChunkType.SRGB.value,
+            ChunkType.ICCP.value,
             ChunkType.GMAP.value, ChunkType.GDAT.value
         }
         self._chunks = [c for c in self._chunks if c.chunk_type not in chunk_types_to_remove]
@@ -360,13 +367,15 @@ class PNGMetadataCodec:
         insert_pos = self._find_metadata_insert_position()
 
         # Define chunks to insert with their creators
+        # Order: iCCP > sRGB > gAMA > cHRM (PNG spec precedence)
         chunks_to_insert = [
-            (srgb, self._create_srgb_chunk),      # sRGB first (highest priority)
-            (gama, self._create_gama_chunk),      # gAMA second
-            (chrm, self._create_chrm_chunk),      # cHRM third
+            (iccp, self._create_iccp_chunk),      # iCCP first (highest priority)
+            (srgb, self._create_srgb_chunk),      # sRGB second
+            (gama, self._create_gama_chunk),      # gAMA third
+            (chrm, self._create_chrm_chunk),      # cHRM fourth
             (cicp, self._create_cicp_chunk),      # cICP (newer standard)
             (mdcv, self._create_mdcv_chunk),
-            (clli, self._create_clli_chunk),
+            # (clli, self._create_clli_chunk),
             (gmap, self._create_gmap_chunk),
         ]
 
@@ -528,6 +537,45 @@ class PNGMetadataCodec:
             'rendering_intent': rendering_intent,
             'rendering_intent_name': intent_names.get(rendering_intent, f'Unknown ({rendering_intent})')
         }
+
+    def _parse_iccp_chunk(self, data: bytes) -> Optional[bytes]:
+        """
+        Parse iCCP chunk - ICC color profile
+
+        Args:
+            data: Raw chunk data
+
+        Returns:
+            Decompressed ICC profile binary data, or None on error
+        """
+        # Find null terminator for profile name
+        null_pos = data.find(b'\x00')
+        if null_pos == -1 or null_pos > 79:
+            return None
+
+        # Extract profile name (for debugging, not used)
+        # profile_name = data[:null_pos].decode('latin-1', errors='ignore')
+
+        # Compression method (should be 0 for deflate)
+        if null_pos + 1 >= len(data):
+            return None
+
+        compression_method = data[null_pos + 1]
+        if compression_method != 0:
+            # Only deflate is supported
+            return None
+
+        # Extract compressed profile data
+        compressed_data = data[null_pos + 2:]
+        if not compressed_data:
+            return None
+
+        # Decompress
+        try:
+            profile_data = zlib.decompress(compressed_data)
+            return profile_data
+        except zlib.error:
+            return None
 
     # === HDR chunk parsers ===
     
@@ -718,7 +766,7 @@ class PNGMetadataCodec:
         # Convert float to int (stored as 1/256 units)
         def to_int(val):
             return int(val * 256)
-        
+
         data = struct.pack('>B9i6i',
             gmap.version,
             to_int(gmap.gain_map_min[0]), to_int(gmap.gain_map_min[1]), to_int(gmap.gain_map_min[2]),
@@ -728,6 +776,30 @@ class PNGMetadataCodec:
             to_int(gmap.alternate_offset[0]), to_int(gmap.alternate_offset[1]), to_int(gmap.alternate_offset[2])
         )
         return PNGChunk(chunk_type=ChunkType.GMAP.value, data=data)
+
+    def _create_iccp_chunk(self, profile_data: bytes) -> PNGChunk:
+        """
+        Create iCCP chunk - ICC color profile
+
+        Args:
+            profile_data: Raw ICC profile binary data
+
+        Returns:
+            PNGChunk with compressed ICC profile
+        """
+        # Use fixed profile name (as Pillow does)
+        profile_name = b'ICC Profile\x00'
+
+        # Compression method: 0 = deflate (only method defined in PNG spec)
+        compression_method = b'\x00'
+
+        # Compress profile data
+        compressed_profile = zlib.compress(profile_data, level=9)
+
+        # Assemble chunk data: name + compression method + compressed profile
+        data = profile_name + compression_method + compressed_profile
+
+        return PNGChunk(chunk_type=ChunkType.ICCP.value, data=data)
     
     # === Utility methods ===
     

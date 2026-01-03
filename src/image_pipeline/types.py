@@ -56,6 +56,9 @@ class ImageMetadata(TypedDict, total=False):
     # === Text metadata ===
     text: dict[str, str]      # Arbitrary key-value pairs for tEXt chunks
 
+    # === Color management ===
+    icc_profile: Optional[bytes]  # ICC color profile (raw binary data)
+
 
 class SaveOptions(TypedDict, total=False):
     """

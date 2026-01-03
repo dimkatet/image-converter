@@ -2,6 +2,7 @@
 PNG format save options adapter
 """
 from typing import TypedDict
+from pathlib import Path
 from image_pipeline.io.formats.base import SaveOptionsAdapter
 from image_pipeline.types import SaveOptions
 
@@ -20,17 +21,20 @@ class PNGSaveOptions(TypedDict, total=False):
             2 = Z_HUFFMAN_ONLY (fast, poor compression)
             3 = Z_RLE (good for images with large uniform areas)
             4 = Z_FIXED (fastest, worst compression)
+
+        icc_profile: Path to ICC color profile file
     """
     compression_level: int  # 0 (no compression) to 9 (max compression)
     strategy: int           # zlib compression strategy (0-4)
+    icc_profile: str        # Path to ICC profile file
 
 
 class PNGOptionsAdapter(SaveOptionsAdapter):
     """Adapter for PNG save options"""
 
     def get_supported_options(self) -> set[str]:
-        """PNG supports compression_level and strategy"""
-        return {'compression_level', 'strategy'}
+        """PNG supports compression_level, strategy, and icc_profile"""
+        return {'compression_level', 'strategy', 'icc_profile'}
 
     def validate(self, options: SaveOptions) -> PNGSaveOptions:
         """
@@ -92,5 +96,28 @@ class PNGOptionsAdapter(SaveOptionsAdapter):
             validated['strategy'] = strategy
         else:
             validated['strategy'] = 0  # Default to Z_DEFAULT_STRATEGY
+
+        # icc_profile (path to ICC profile file)
+        if 'icc_profile' in options:
+            icc_path = options['icc_profile']
+
+            if not isinstance(icc_path, str):
+                raise TypeError(
+                    f"icc_profile must be str (path), got {type(icc_path).__name__}"
+                )
+
+            # Check if file exists
+            icc_file = Path(icc_path)
+            if not icc_file.exists():
+                raise FileNotFoundError(
+                    f"ICC profile file not found: {icc_path}"
+                )
+
+            if not icc_file.is_file():
+                raise ValueError(
+                    f"ICC profile path is not a file: {icc_path}"
+                )
+
+            validated['icc_profile'] = icc_path
 
         return validated
