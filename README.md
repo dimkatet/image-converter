@@ -257,18 +257,76 @@ image_pipeline/
 
 ## Development
 
+### Setup
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd image_pipeline
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
+
+# Install package with dev dependencies (includes pytest, pyright)
+pip install -e ".[dev]"
+```
+
+### Testing
+
+The project uses pytest for testing:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/unit/test_filters/test_pq_encode_decode.py
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage (if pytest-cov installed)
+pytest --cov=src/image_pipeline --cov-report=html
+```
+
+**Test structure:**
+- `tests/unit/test_filters/` - Unit tests for filters (PQ, quantize, color conversion, etc.)
+- `tests/integration/` - End-to-end workflow tests (planned)
+- `tests/conftest.py` - Shared fixtures
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
+
 ### Type Checking
 
 The project uses Pyright for static type checking:
 
 ```bash
-# Install dev dependencies (includes Pyright)
-pip install -e ".[dev]"
-
 # Run type checker
 pyright
 
 # Pyright checks only src/ directory (configured in pyproject.toml)
+# Must pass with 0 errors before committing
+```
+
+### CI/CD
+
+GitHub Actions runs automated checks on every push and pull request:
+
+1. **Pyright type checking** - Must pass with 0 errors
+2. **Pytest test suite** - All tests must pass
+
+See [.github/workflows/ci.yml](.github/workflows/ci.yml) for CI configuration.
+
+**Run CI checks locally before pushing:**
+
+```bash
+# Type checking
+pyright
+
+# Tests
+pytest tests/ -v --tb=short
 ```
 
 ### Creating Custom Filters

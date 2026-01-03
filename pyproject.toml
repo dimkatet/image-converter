@@ -25,7 +25,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pyright"
+    "pyright",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
 ]
 
 [tool.setuptools.packages.find]
@@ -41,3 +43,23 @@ reportMissingTypeStubs = false
 reportUnusedImport = true
 reportUnusedVariable = true
 reportDuplicateImport = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",                    # Verbose output
+    "--strict-markers",      # Raise error on unknown markers
+    "--tb=short",           # Shorter traceback format
+    "--color=yes",          # Colored output
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "error",                # Convert warnings to errors by default
+    "ignore::UserWarning",  # Except UserWarnings (like our PQ reference_peak warnings)
+]
