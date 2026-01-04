@@ -17,8 +17,6 @@ dependencies = [
     "numpy",
     "tifffile",
     "scipy",
-    "ImageIO",
-    "imageio[pillow]",
     "pypng",
     "imagecodecs"
 ]
@@ -27,7 +25,8 @@ dependencies = [
 dev = [
     "pyright",
     "pytest>=7.0.0",
-    "pytest-cov>=4.0.0"
+    "pytest-cov>=4.0.0",
+    "pyinstaller>=6.0.0"
 ]
 
 [tool.setuptools.packages.find]

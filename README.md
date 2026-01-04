@@ -250,10 +250,10 @@ image_pipeline/
 - Python ≥ 3.12
 - NumPy
 - Pillow
-- imageio
 - tifffile
 - scipy
-- pypng (optional, for uint16 PNG)
+- pypng
+- imagecodecs
 
 ## Development
 
@@ -339,13 +339,50 @@ class MyCustomFilter(ImageFilter):
     def __init__(self, param=1.0):
         super().__init__()
         self.param = param
-    
+
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
         # Your processing logic
         result = pixels * self.param
         return result.astype(pixels.dtype)
 ```
+
+## Building Executables
+
+You can build standalone executables using PyInstaller:
+
+### Installation
+
+```bash
+# Install PyInstaller (included in dev dependencies)
+pip install -e ".[dev]"
+```
+
+### Building
+
+**Important**: Executables are platform-specific. Build on the same OS you want to run on:
+- Build on Linux → Linux executable
+- Build on Windows → Windows .exe
+- Build on macOS → macOS app
+
+```bash
+# Single-file executable
+pyinstaller --onefile --name image-pipeline main.py
+
+# Output will be in dist/image-pipeline (or dist/image-pipeline.exe on Windows)
+```
+
+### Running the Executable
+
+```bash
+# Linux/macOS
+./dist/image-pipeline input.tiff output.png --filter blur:sigma=2.0
+
+# Windows
+dist\image-pipeline.exe input.tiff output.png --filter blur:sigma=2.0
+```
+
+**Note**: The executable will be 100-300 MB due to NumPy, Pillow, and scipy bundled inside.
 
 ## License
 
