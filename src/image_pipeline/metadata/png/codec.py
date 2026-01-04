@@ -375,7 +375,7 @@ class PNGMetadataCodec:
             (chrm, self._create_chrm_chunk),      # cHRM fourth
             (cicp, self._create_cicp_chunk),      # cICP (newer standard)
             (mdcv, self._create_mdcv_chunk),
-            # (clli, self._create_clli_chunk),
+            (clli, self._create_clli_chunk),
             (gmap, self._create_gmap_chunk),
         ]
 

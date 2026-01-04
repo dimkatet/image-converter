@@ -24,14 +24,27 @@ tests/
 ├── conftest.py                               # Shared fixtures
 ├── README.md                                 # Testing documentation
 └── unit/
-    └── test_filters/
-        ├── test_pq_encode_decode.py         # PQ encode/decode (26 tests)
-        ├── test_quantize_dequantize.py      # Quantization (23 tests)
-        ├── test_color_convert.py            # Color conversion (15 tests)
-        └── test_luminance.py                # Luminance filters (18 tests)
+    ├── test_filters/
+    │   ├── test_pq_encode_decode.py         # PQ encode/decode (26 tests)
+    │   ├── test_quantize_dequantize.py      # Quantization (23 tests)
+    │   ├── test_color_convert.py            # Color conversion (15 tests)
+    │   ├── test_luminance.py                # Luminance filters (18 tests)
+    │   ├── test_remove_alpha.py             # Remove alpha (10 tests)
+    │   ├── test_normalize.py                # Normalize (17 tests)
+    │   ├── test_grayscale.py                # Grayscale conversion (20 tests)
+    │   ├── test_blur.py                     # Gaussian blur (16 tests)
+    │   └── test_sharpen.py                  # Sharpening (18 tests)
+    ├── test_core/
+    │   ├── test_image_data.py               # ImageData class (34 tests)
+    │   └── test_filter_pipeline.py          # FilterPipeline (31 tests)
+    └── test_io/
+        ├── test_png_io.py                   # PNG I/O round-trip (23 tests)
+        ├── test_avif_io.py                  # AVIF I/O round-trip (22 tests)
+        ├── test_tiff_io.py                  # TIFF I/O tests (28 tests - SKIPPED)
+        └── README.md                        # I/O testing guide
 ```
 
-**Total: 82 tests covering critical filters**
+**Total: 301 tests (273 passing, 28 skipped)**
 
 ### 3. Test Coverage
 
@@ -40,6 +53,24 @@ tests/
 - ✅ Quantize/Dequantize - Bit depth conversion (8/10/12/16)
 - ✅ ColorConvert - RGB color space transforms (BT.709, BT.2020, Display P3)
 - ✅ AbsoluteLuminance/RelativeLuminance - Scene/display-referred workflows
+
+**Phase 2 - Remaining Filters (COMPLETED):**
+- ✅ RemoveAlpha - Alpha channel removal
+- ✅ Normalize - Value range normalization
+- ✅ Grayscale - RGB to grayscale conversion (3 methods)
+- ✅ Blur - Gaussian blur filter
+- ✅ Sharpen - Image sharpening filter
+
+**Phase 3 - Core Components (COMPLETED):**
+- ✅ ImageData - Central data container with auto-sync metadata
+- ✅ FilterPipeline - Chain-of-responsibility pattern
+
+**Phase 4 - I/O System (IN PROGRESS):**
+- ✅ PNG I/O - Round-trip with full HDR metadata (cICP, cLLi, mDCv chunks)
+- ✅ AVIF I/O - HDR format with CICP metadata, 8/10/12-bit support (22 tests)
+- ⏭️ TIFF I/O - Tests written (28 tests) but skipped (writer not implemented)
+- ⏳ JPEG I/O - Standard JPEG not implemented (Ultra HDR requires float data)
+- ⏳ WebP I/O - Writer implemented, tests TODO
 
 **Each filter tested for:**
 - Basic operation with known values
@@ -72,8 +103,9 @@ Available to all tests:
 1. **Setup** (Python 3.12, pip caching)
 2. **Install** dependencies (`pip install -e ".[dev]"`)
 3. **Pyright** type checking (must pass with 0 errors)
-4. **Pytest** test suite (all 82 tests must pass)
-5. **Summary** generation in GitHub UI
+4. **Pytest** test suite with coverage (all tests must pass, coverage ≥ 62%)
+5. **Upload** coverage HTML report as artifact (available for 30 days)
+6. **Summary** generation in GitHub UI
 
 **Matrix:**
 - Python versions: 3.12 only (project requirement)
@@ -82,7 +114,15 @@ Available to all tests:
 **Exit conditions:**
 - ❌ Fails if Pyright reports errors
 - ❌ Fails if any test fails
-- ✅ Passes only when both succeed
+- ❌ Fails if test coverage < 62%
+- ✅ Passes only when all checks succeed
+
+**Coverage report:**
+- HTML report uploaded as artifact (available in Actions tab)
+- Current coverage: **62.6%** (passes 62% minimum threshold)
+- Well-tested modules: filters (88-100%), core (100%), PNG I/O (75-95%)
+- Modules needing tests: TIFF reader (24%), JPEG/UltraHDR (0-47%), WebP (25-47%), tonemap (16% WIP)
+- Next goal: increase to 70%+ by adding I/O tests
 
 ### 6. Documentation Updates
 
@@ -121,8 +161,12 @@ Before pushing to GitHub, run the same checks that CI will run:
 # 1. Type checking (must pass with 0 errors)
 pyright
 
-# 2. All tests (all must pass)
-pytest tests/ -v --tb=short
+# 2. All tests with coverage (all must pass, coverage ≥ 62%)
+pytest tests/ -v --tb=short --cov=src/image_pipeline --cov-report=term --cov-report=html --cov-fail-under=62
+
+# View detailed HTML coverage report
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
 ```
 
 ### Common Commands
@@ -147,33 +191,35 @@ pytest --cov=src/image_pipeline --cov-report=html
 
 ## 📊 Test Results
 
-**Current status:** ✅ All 82 tests passing
+**Current status:** ✅ 273 tests passing, 28 skipped
 
 ```
 tests/unit/test_filters/test_pq_encode_decode.py      26 passed
 tests/unit/test_filters/test_quantize_dequantize.py   23 passed
 tests/unit/test_filters/test_color_convert.py         15 passed
 tests/unit/test_filters/test_luminance.py             18 passed
+tests/unit/test_filters/test_remove_alpha.py          10 passed
+tests/unit/test_filters/test_normalize.py             17 passed
+tests/unit/test_filters/test_grayscale.py             20 passed
+tests/unit/test_filters/test_blur.py                  16 passed
+tests/unit/test_filters/test_sharpen.py               18 passed
+tests/unit/test_core/test_image_data.py               34 passed
+tests/unit/test_core/test_filter_pipeline.py          31 passed
+tests/unit/test_io/test_png_io.py                     23 passed
+tests/unit/test_io/test_avif_io.py                    22 passed
+tests/unit/test_io/test_tiff_io.py                    28 skipped
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL                                                  82 passed in 0.31s
+TOTAL                                                 273 passed, 28 skipped in 0.62s
 ```
 
 ## 🔄 Next Steps (Future Work)
 
-**Phase 2 - Remaining Filters:**
-- Normalize, Grayscale, RemoveAlpha
-- Blur, Sharpen
-- Other simple filters
-
-**Phase 3 - Core Components:**
-- ImageData tests
-- FilterPipeline tests
-- Processor tests
-
-**Phase 4 - I/O System:**
-- PNG reader/writer tests
-- AVIF reader/writer tests
-- Metadata preservation tests
+**Phase 4 - I/O System (continued):**
+- TIFF I/O tests (compression: LZW, Deflate, ZSTD, JPEG)
+- AVIF I/O tests (HDR metadata, different bit depths)
+- JPEG I/O tests (lossy format, quality settings)
+- WebP I/O tests (lossy/lossless modes)
+- ICC profile preservation tests
 
 **Phase 5 - Integration Tests:**
 - End-to-end HDR workflows
@@ -183,8 +229,9 @@ TOTAL                                                  82 passed in 0.31s
 **Phase 6 - Advanced:**
 - Performance benchmarks
 - Property-based testing (hypothesis)
-- Coverage reporting in CI
-- Badge in README
+- ✅ Coverage reporting in CI (62% minimum threshold, uploaded as artifact)
+- Coverage badge in README (future)
+- Increase coverage to 70%+ (add TIFF, JPEG, WebP I/O tests)
 
 ## 📝 Notes
 

@@ -27,6 +27,9 @@ class PNGFormatWriter(FormatWriter):
             img_data: ImageData with pixels and metadata
             options: Save options
         """
+        # Validate image data first
+        self.validate(img_data)
+
         # Validate options
         validated_options = self.options_adapter.validate(options)
 
@@ -60,7 +63,10 @@ class PNGFormatWriter(FormatWriter):
         """
         Validate that data is compatible with PNG format
 
-        PNG supports: uint8, uint16
+        PNG supports:
+        - Pixel dtypes: uint8 (8-bit), uint16 (16-bit)
+        - Note: 10-bit and 12-bit are NOT standard PNG bit depths
+        - Use uint16 for >8-bit data (actual bit depth can be stored in metadata)
 
         Args:
             img_data: ImageData to validate
@@ -78,7 +84,7 @@ class PNGFormatWriter(FormatWriter):
 
         if pixels.dtype not in (np.uint8, np.uint16):
             raise ValueError(
-                f"PNG supports only uint8 and uint16. "
+                f"PNG supports only uint8 and uint16 dtypes. "
                 f"Got: {pixels.dtype}.\n"
                 f"Solutions:\n"
                 f"  1. For float: use quantize filter first\n"
@@ -92,6 +98,17 @@ class PNGFormatWriter(FormatWriter):
         if pixels.ndim == 3 and pixels.shape[2] not in (1, 2, 3, 4):
             raise ValueError(
                 f"Expected 1, 2, 3, or 4 channels, got {pixels.shape[2]}"
+            )
+
+        # Warn if metadata contains unsupported bit_depth
+        bit_depth = img_data.metadata.get('bit_depth')
+        if bit_depth is not None and bit_depth not in (8, 16):
+            import warnings
+            warnings.warn(
+                f"PNG bit_depth in metadata is {bit_depth}, but PNG standard only supports 8 and 16 bits per sample. "
+                f"The image will be stored as {pixels.dtype.itemsize * 8}-bit. "
+                f"Logical bit_depth {bit_depth} will not be preserved on read.",
+                UserWarning
             )
 
     def _write_pixels(self, pixels: np.ndarray, options: PNGSaveOptions) -> None:

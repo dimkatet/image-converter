@@ -101,11 +101,11 @@ class PNGMetadataAdapter:
     def _to_mdcv(metadata: ImageMetadata) -> Optional[MDCVData]:
         """
         Generate mDCv chunk from metadata
-        
-        Requires: peak_luminance AND (color_space OR color_primaries)
+
+        Requires: mastering_display_max_luminance AND (color_space OR color_primaries)
         """
-        peak_luminance = metadata.get('peak_luminance')
-        min_luminance = metadata.get('min_luminance', 0.0001)
+        peak_luminance = metadata.get('mastering_display_max_luminance')
+        min_luminance = metadata.get('mastering_display_min_luminance', 0.0001)
         
         # Валидация: нужен peak_luminance
         if not peak_luminance:
