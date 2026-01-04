@@ -50,11 +50,13 @@ class TiffFormatReader(FormatReader):
                 if page.sampleformat == 3:  # SAMPLEFORMAT.IEEEFP = 3
                     metadata['transfer_function'] = TransferFunction.LINEAR
 
-                # TODO: Auto-detect paper_white from TIFF tags for scene-referred HDR
-                # Scene-referred TIFF files encode linear values relative to a paper white
-                # (typically 100 nits). Consider reading relevant EXIF/TIFF tags:
-                # - Custom tags for luminance reference
-                # Then set metadata['paper_white'] = detected_value
+                # Read custom metadata from ImageDescription tag (270)
+                description_tag = page.tags.get(270)
+                if description_tag:
+                    description = description_tag.value
+                    if isinstance(description, str):
+                        # Parse key=value pairs from ImageDescription
+                        self._parse_description_metadata(description, metadata)
 
             return ImageData(pixels, metadata)
 
@@ -107,6 +109,39 @@ class TiffFormatReader(FormatReader):
             'green': (green_x, green_y),
             'blue': (blue_x, blue_y)
         }
+
+    @staticmethod
+    def _parse_description_metadata(description: str, metadata: ImageMetadata) -> None:
+        """
+        Parse custom metadata from ImageDescription tag
+
+        Format: "key1=value1; key2=value2; ..."
+
+        Args:
+            description: ImageDescription string
+            metadata: Metadata dict to update
+        """
+        # Split by semicolon and parse key=value pairs
+        for pair in description.split(';'):
+            pair = pair.strip()
+            if '=' in pair:
+                key, value = pair.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+
+                # Parse known metadata fields
+                try:
+                    if key == 'bit_depth':
+                        metadata['bit_depth'] = int(value)
+                    elif key == 'paper_white':
+                        metadata['paper_white'] = float(value)
+                    elif key == 'mastering_display_max_luminance':
+                        metadata['mastering_display_max_luminance'] = float(value)
+                    elif key == 'mastering_display_min_luminance':
+                        metadata['mastering_display_min_luminance'] = float(value)
+                except (ValueError, TypeError):
+                    # Skip invalid values
+                    pass
 
     @staticmethod
     def _match_color_space(primaries: Dict[str, Tuple[float, float]],

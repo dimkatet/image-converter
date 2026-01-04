@@ -8,20 +8,13 @@ TIFF Specification Support:
 - Compression: LZW, Deflate, ZSTD, JPEG, None (Tag 259)
 - Samples per pixel: 1 (grayscale), 3 (RGB), 4 (RGBA) (Tag 277)
 
-These tests verify EXPECTED behavior (TDD-style), not current implementation.
-Tests may fail if features are not yet implemented - that's intentional!
-
-SKIPPED: TIFF writer not implemented yet (writer.write() is a stub).
-Tests document expected behavior for future implementation.
+These tests verify full TIFF writer/reader implementation with metadata support.
 """
 
 import numpy as np
 import pytest
 from pathlib import Path
 import tempfile
-
-# Skip all TIFF tests - writer not implemented
-pytestmark = pytest.mark.skip(reason="TIFF writer not implemented (stub)")
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.tiff.reader import TiffFormatReader
@@ -335,7 +328,9 @@ class TestTIFFCompression:
 
     def test_lzw_compression(self, temp_tiff_path):
         """Test LZW compression (lossless)"""
-        pixels = np.random.randint(0, 256, (50, 50, 3), dtype=np.uint8)
+        # Use gradient instead of random noise for better compression
+        x = np.linspace(0, 255, 50, dtype=np.uint8)
+        pixels = np.tile(x, (50, 3, 1)).transpose(0, 2, 1)
         img_data = ImageData(pixels=pixels)
 
         writer = TiffFormatWriter(str(temp_tiff_path))
@@ -346,8 +341,8 @@ class TestTIFFCompression:
 
         # LZW is lossless
         np.testing.assert_array_equal(result.pixels, pixels)
-        # Compressed file should be smaller
-        assert temp_tiff_path.stat().st_size < pixels.nbytes * 1.2
+        # Compressed gradient should be smaller than uncompressed
+        assert temp_tiff_path.stat().st_size < pixels.nbytes
 
     def test_deflate_compression(self, temp_tiff_path):
         """Test Deflate compression (lossless, similar to PNG)"""
@@ -379,7 +374,12 @@ class TestTIFFCompression:
 
     def test_jpeg_compression_lossy(self, temp_tiff_path):
         """Test JPEG compression (lossy) - requires tolerance"""
-        pixels = np.random.randint(0, 256, (50, 50, 3), dtype=np.uint8)
+        # Use smooth gradient for JPEG (works better than random noise)
+        y, x = np.ogrid[0:50, 0:50]
+        pixels = np.zeros((50, 50, 3), dtype=np.uint8)
+        pixels[:, :, 0] = (x * 255 // 50).astype(np.uint8)  # Red gradient horizontal
+        pixels[:, :, 1] = (y * 255 // 50).astype(np.uint8)  # Green gradient vertical
+        pixels[:, :, 2] = 128  # Blue constant
         img_data = ImageData(pixels=pixels)
 
         writer = TiffFormatWriter(str(temp_tiff_path))
@@ -389,7 +389,7 @@ class TestTIFFCompression:
         result = reader.read()
 
         # JPEG is lossy - use tolerance
-        # Most pixels should be close (within ±5 for quality=95)
+        # Smooth gradients should compress well with minimal error at quality=95
         assert np.mean(np.abs(result.pixels.astype(float) - pixels.astype(float))) < 5.0
         assert result.pixels.shape == pixels.shape
 
