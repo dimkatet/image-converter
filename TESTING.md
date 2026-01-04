@@ -37,14 +37,20 @@ tests/
     ├── test_core/
     │   ├── test_image_data.py               # ImageData class (34 tests)
     │   └── test_filter_pipeline.py          # FilterPipeline (31 tests)
-    └── test_io/
-        ├── test_png_io.py                   # PNG I/O round-trip (23 tests)
-        ├── test_avif_io.py                  # AVIF I/O round-trip (22 tests)
-        ├── test_tiff_io.py                  # TIFF I/O tests (28 tests - SKIPPED)
-        └── README.md                        # I/O testing guide
+    ├── test_io/
+    │   ├── test_png_io.py                   # PNG I/O round-trip (23 tests)
+    │   ├── test_avif_io.py                  # AVIF I/O round-trip (22 tests)
+    │   ├── test_tiff_io.py                  # TIFF I/O tests (28 tests - SKIPPED)
+    │   ├── test_jpeg_io.py                  # JPEG/Ultra HDR I/O (60 tests, 5 skipped)
+    │   ├── test_webp_io.py                  # WebP I/O tests (48 tests, 3 skipped)
+    │   ├── test_options_adapters.py         # PNG/TIFF/AVIF options (53 tests)
+    │   ├── test_io_facades.py               # ImageReader/Writer facades (26 tests, 2 skipped)
+    │   └── README.md                        # I/O testing guide
+    └── test_cli/
+        └── test_parsers.py                  # CLI parsers & registries (51 tests)
 ```
 
-**Total: 301 tests (273 passing, 28 skipped)**
+**Total: 539 tests (529 passing, 10 skipped)**
 
 ### 3. Test Coverage
 
@@ -65,12 +71,20 @@ tests/
 - ✅ ImageData - Central data container with auto-sync metadata
 - ✅ FilterPipeline - Chain-of-responsibility pattern
 
-**Phase 4 - I/O System (IN PROGRESS):**
-- ✅ PNG I/O - Round-trip with full HDR metadata (cICP, cLLi, mDCv chunks)
-- ✅ AVIF I/O - HDR format with CICP metadata, 8/10/12-bit support (22 tests)
+**Phase 4 - I/O System (COMPLETED):**
+- ✅ PNG I/O - Round-trip with full HDR metadata (cICP, cLLi, mDCv chunks) - 23 tests
+- ✅ AVIF I/O - HDR format with CICP metadata, 8/10/12-bit support - 22 tests
+- ✅ JPEG I/O - Ultra HDR reader/writer, options, round-trip - 60 tests (55 passing, 5 skipped)
+- ✅ WebP I/O - Lossy/lossless, options, round-trip - 48 tests (45 passing, 3 skipped)
+- ✅ Options Adapters - PNG/TIFF/AVIF save options validation - 53 tests (100% coverage)
+- ✅ I/O Facades - ImageReader/Writer format detection - 26 tests (24 passing, 2 skipped)
 - ⏭️ TIFF I/O - Tests written (28 tests) but skipped (writer not implemented)
-- ⏳ JPEG I/O - Standard JPEG not implemented (Ultra HDR requires float data)
-- ⏳ WebP I/O - Writer implemented, tests TODO
+
+**Phase 5 - CLI Parsers (COMPLETED):**
+- ✅ Filter Parser - Parse filter strings (e.g., `blur:sigma=2.5`) - 26 tests
+- ✅ Options Parser - Parse save options (e.g., `quality=90`) - 19 tests
+- ✅ Registries - Filter and color space registries - 6 tests
+- All CLI parsers now at 100% coverage!
 
 **Each filter tested for:**
 - Basic operation with known values
@@ -114,15 +128,24 @@ Available to all tests:
 **Exit conditions:**
 - ❌ Fails if Pyright reports errors
 - ❌ Fails if any test fails
-- ❌ Fails if test coverage < 62%
+- ❌ Fails if test coverage < 80%
 - ✅ Passes only when all checks succeed
 
 **Coverage report:**
 - HTML report uploaded as artifact (available in Actions tab)
-- Current coverage: **62.6%** (passes 62% minimum threshold)
-- Well-tested modules: filters (88-100%), core (100%), PNG I/O (75-95%)
-- Modules needing tests: TIFF reader (24%), JPEG/UltraHDR (0-47%), WebP (25-47%), tonemap (16% WIP)
-- Next goal: increase to 70%+ by adding I/O tests
+- Current coverage: **83%** (exceeds 80% minimum threshold) ⬆️ +21% from 62%
+- Well-tested modules (100% coverage):
+  - All filters: PQ, quantize, color_convert, luminance, normalize, grayscale, blur, sharpen
+  - Core: ImageData, FilterPipeline
+  - I/O: PNG/TIFF/AVIF/WebP options adapters (100%), ImageReader/Writer facades (100%)
+  - CLI: filter_parser, options_parser, filter_registry, color_space_registry (100%)
+- Partially tested:
+  - JPEG/Ultra HDR I/O: 83-100% coverage
+  - WebP I/O: 95-100% coverage
+  - PNG I/O: 75-98% coverage
+  - AVIF I/O: 81-98% coverage
+- Modules without tests: cli.py (20%), processor.py (0%), tonemap (16%)
+- Next goal: 85%+ by adding processor integration tests
 
 ### 6. Documentation Updates
 
@@ -161,8 +184,8 @@ Before pushing to GitHub, run the same checks that CI will run:
 # 1. Type checking (must pass with 0 errors)
 pyright
 
-# 2. All tests with coverage (all must pass, coverage ≥ 62%)
-pytest tests/ -v --tb=short --cov=src/image_pipeline --cov-report=term --cov-report=html --cov-fail-under=62
+# 2. All tests with coverage (all must pass, coverage ≥ 80%)
+pytest tests/ -v --tb=short --cov=src/image_pipeline --cov-report=term --cov-report=html --cov-fail-under=80
 
 # View detailed HTML coverage report
 open htmlcov/index.html  # macOS
@@ -191,25 +214,29 @@ pytest --cov=src/image_pipeline --cov-report=html
 
 ## 📊 Test Results
 
-**Current status:** ✅ 273 tests passing, 28 skipped
+**Current status:** ✅ 529 tests passing, 10 skipped
 
 ```
-tests/unit/test_filters/test_pq_encode_decode.py      26 passed
-tests/unit/test_filters/test_quantize_dequantize.py   23 passed
-tests/unit/test_filters/test_color_convert.py         15 passed
-tests/unit/test_filters/test_luminance.py             18 passed
-tests/unit/test_filters/test_remove_alpha.py          10 passed
-tests/unit/test_filters/test_normalize.py             17 passed
-tests/unit/test_filters/test_grayscale.py             20 passed
-tests/unit/test_filters/test_blur.py                  16 passed
-tests/unit/test_filters/test_sharpen.py               18 passed
-tests/unit/test_core/test_image_data.py               34 passed
-tests/unit/test_core/test_filter_pipeline.py          31 passed
-tests/unit/test_io/test_png_io.py                     23 passed
-tests/unit/test_io/test_avif_io.py                    22 passed
-tests/unit/test_io/test_tiff_io.py                    28 skipped
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL                                                 273 passed, 28 skipped in 0.62s
+tests/unit/test_filters/test_pq_encode_decode.py          26 passed
+tests/unit/test_filters/test_quantize_dequantize.py       23 passed
+tests/unit/test_filters/test_color_convert.py             15 passed
+tests/unit/test_filters/test_luminance.py                 18 passed
+tests/unit/test_filters/test_remove_alpha.py              10 passed
+tests/unit/test_filters/test_normalize.py                 17 passed
+tests/unit/test_filters/test_grayscale.py                 20 passed
+tests/unit/test_filters/test_blur.py                      16 passed
+tests/unit/test_filters/test_sharpen.py                   18 passed
+tests/unit/test_core/test_image_data.py                   34 passed
+tests/unit/test_core/test_filter_pipeline.py              31 passed
+tests/unit/test_io/test_png_io.py                         23 passed
+tests/unit/test_io/test_avif_io.py                        22 passed
+tests/unit/test_io/test_jpeg_io.py                        55 passed, 5 skipped
+tests/unit/test_io/test_webp_io.py                        45 passed, 3 skipped
+tests/unit/test_io/test_options_adapters.py               53 passed
+tests/unit/test_io/test_io_facades.py                     24 passed, 2 skipped
+tests/unit/test_cli/test_parsers.py                       51 passed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL                                                     529 passed, 10 skipped in 2.10s
 ```
 
 ## 🔄 Next Steps (Future Work)
@@ -221,17 +248,19 @@ TOTAL                                                 273 passed, 28 skipped in 
 - WebP I/O tests (lossy/lossless modes)
 - ICC profile preservation tests
 
-**Phase 5 - Integration Tests:**
-- End-to-end HDR workflows
-- CLI integration tests
-- Real file I/O tests
+**Phase 5 - Future Work:**
+- Integration tests for end-to-end HDR workflows
+- CLI integration tests (main entry point)
+- Processor orchestration tests
+- Tone mapping operators (Reinhard, ACES, Hable)
+- PNG metadata codec tests (cICP, mDCv, cLLi chunk encoding/decoding)
 
 **Phase 6 - Advanced:**
 - Performance benchmarks
 - Property-based testing (hypothesis)
-- ✅ Coverage reporting in CI (62% minimum threshold, uploaded as artifact)
+- ✅ Coverage reporting in CI (80% minimum threshold, uploaded as artifact)
 - Coverage badge in README (future)
-- Increase coverage to 70%+ (add TIFF, JPEG, WebP I/O tests)
+- Increase coverage to 85%+ (add processor and tonemap tests)
 
 ## 📝 Notes
 

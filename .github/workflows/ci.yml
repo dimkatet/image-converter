@@ -35,7 +35,7 @@ jobs:
 
     - name: Run tests with pytest and coverage
       run: |
-        pytest tests/ -v --tb=short --cov=src/image_pipeline --cov-report=term --cov-report=html --cov-fail-under=62
+        pytest tests/ -v --tb=short --cov=src/image_pipeline --cov-report=term --cov-report=html --cov-fail-under=80
 
     - name: Upload coverage report
       if: always()
