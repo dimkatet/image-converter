@@ -1,5 +1,7 @@
 from .pq_decode import PQDecodeFilter
 from .pq_encode import PQEncodeFilter
+from .srgb_decode import SRGBDecodeFilter
+from .srgb_encode import SRGBEncodeFilter
 
 from .normalize import NormalizeFilter
 from .quantize import QuantizeFilter
@@ -19,6 +21,8 @@ from .tonemap import ToneMappingFilter
 __all__ = [
     "PQEncodeFilter",
     "PQDecodeFilter",
+    "SRGBEncodeFilter",
+    "SRGBDecodeFilter",
     "RemoveAlphaFilter",
     "BlurFilter",
     "SharpenFilter",

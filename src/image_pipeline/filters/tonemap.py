@@ -35,6 +35,8 @@ class ToneMappingFilter(ImageFilter):
         white_point: float = 1.0,
         target_peak: float = 100.0,
         key_value: float = 0.18,
+        min_exp: float = 0.1,
+        max_exp: float = 10.0,
     ):
         """
         Args:
@@ -45,12 +47,16 @@ class ToneMappingFilter(ImageFilter):
             key_value: Key value for log-average luminance scaling (default: 0.18)
                       Controls overall brightness: lower = darker, higher = brighter
                       Typical range: 0.09 (low key) to 0.36 (high key)
+            min_exp: Minimum exposure multiplier to prevent over-darkening (default: 0.1)
+            max_exp: Maximum exposure multiplier to prevent over-brightening (default: 10.0)
         """
         self.method = method
         self.exposure = exposure
         self.white_point = white_point
         self.target_peak = target_peak
         self.key_value = key_value
+        self.min_exp = min_exp
+        self.max_exp = max_exp
         super().__init__()
 
     def validate_params(self) -> None:
@@ -93,6 +99,25 @@ class ToneMappingFilter(ImageFilter):
         if self.key_value <= 0:
             raise ValueError(f"key_value must be positive, got {self.key_value}")
 
+        if not isinstance(self.min_exp, (int, float)):
+            raise TypeError(
+                f"min_exp must be numeric, got {type(self.min_exp).__name__}"
+            )
+        if self.min_exp <= 0:
+            raise ValueError(f"min_exp must be positive, got {self.min_exp}")
+
+        if not isinstance(self.max_exp, (int, float)):
+            raise TypeError(
+                f"max_exp must be numeric, got {type(self.max_exp).__name__}"
+            )
+        if self.max_exp <= 0:
+            raise ValueError(f"max_exp must be positive, got {self.max_exp}")
+
+        if self.min_exp >= self.max_exp:
+            raise ValueError(
+                f"min_exp must be less than max_exp, got min_exp={self.min_exp}, max_exp={self.max_exp}"
+            )
+
     def apply(self, pixels: np.ndarray) -> np.ndarray:
         self.validate(pixels)
 
@@ -105,24 +130,14 @@ class ToneMappingFilter(ImageFilter):
         # Apply exposure adjustment
         hdr = hdr * self.exposure
 
-        # Compute log-average luminance (Reinhard Global approach)
-        # This gives perceptually correct average that isn't dominated by bright pixels
-        delta = 0.0001  # Small constant to avoid log(0)
-        log_avg_luminance = np.exp(np.mean(np.log(delta + hdr)))
-
-        # Scale by key value to map to perceptually appropriate range
-        # key_value / log_avg_luminance gives the scaling factor
-        # This makes log_avg_luminance map to key_value (typically 0.18 = middle gray)
-        hdr_scaled = (self.key_value / log_avg_luminance) * hdr
-
         # Apply tone mapping operator
         # All operators output [0, 1] range
         if self.method == 'reinhard':
-            sdr = self._reinhard(hdr_scaled)
+            sdr = self._reinhard(hdr)
         elif self.method == 'reinhard_extended':
-            sdr = self._reinhard_extended(hdr_scaled)
+            sdr = self._reinhard_extended(hdr)
         elif self.method == 'aces':
-            sdr = self._aces_filmic(hdr_scaled)
+            sdr = self._aces_filmic(hdr)
         else:
             raise ValueError(f"Unknown method: {self.method}")
 
@@ -131,59 +146,172 @@ class ToneMappingFilter(ImageFilter):
 
         return sdr.astype(np.float32)
 
-    def _reinhard(self, x: np.ndarray) -> np.ndarray:
+    def _reinhard(self, hdr: np.ndarray) -> np.ndarray:
         """
-        Reinhard Global operator with automatic white point.
+        Reinhard Global operator with luminance-based tone mapping.
 
-        Uses the max luminance as white point for better handling of bright highlights.
-        Formula: L_out = (L * (1 + L/L_white²)) / (1 + L)
+        Applies tone mapping to luminance channel only, then reapplies color
+        to preserve chromaticity. This prevents hue shifts and color distortion.
 
-        Input is expected to be scaled by log-average luminance.
+        Steps:
+        1. Compute luminance (Y) from RGB
+        2. Calculate log-average luminance for exposure scaling
+        3. Scale luminance by key_value
+        4. Compute auto white point from max scaled luminance
+        5. Apply Reinhard formula to luminance: L_out = (L * (1 + L/L_white²)) / (1 + L)
+        6. Reconstruct RGB preserving original chromaticity
+
+        Args:
+            hdr: Linear RGB HDR image (already exposure-adjusted)
+
+        Returns:
+            Linear RGB SDR image in [0, 1] range
         """
-        # Use max luminance as white point (burns to white)
-        # This handles bright highlights better than simple Reinhard
-        L_white = np.max(x)
-        if L_white < 1.0:
-            L_white = 1.0  # Avoid division issues
+        delta = 1e-6  # Small constant to avoid log(0) and division by zero
 
-        # Reinhard with white point
-        numerator = x * (1.0 + x / (L_white * L_white))
-        denominator = 1.0 + x
-        return numerator / denominator
+        # Compute luminance (Rec.709 coefficients for linear RGB)
+        if hdr.ndim == 3 and hdr.shape[-1] == 3:
+            # Y = 0.2126*R + 0.7152*G + 0.0722*B 
+            # TODO: Support other color spaces later
+            luminance_weights = np.array([0.2126, 0.7152, 0.0722], dtype=hdr.dtype)
+            L = np.dot(hdr, luminance_weights)
+        else:
+            # Grayscale or single channel
+            L = hdr
 
-    def _reinhard_extended(self, x: np.ndarray) -> np.ndarray:
+        # Ensure non-negative luminance
+        L = np.maximum(L, 0.0)
+
+        # Compute log-average luminance (geometric mean)
+        # This gives perceptually correct average brightness
+        log_avg_luminance = np.exp(np.mean(np.log(delta + L)))
+
+        # Scale luminance by key value
+        # This maps the log-average luminance to key_value (typically 0.18 = middle gray)
+        # Clip exposure to prevent extreme scaling from very dark/bright images
+        exposure = self.key_value / log_avg_luminance
+        exposure = np.clip(exposure, self.min_exp, self.max_exp)
+        L_scaled = exposure * L
+
+        # Compute automatic white point from ORIGINAL luminance (before scaling)
+        # This represents the input dynamic range, not the exposure-adjusted range
+        L_white = np.percentile(L, 99.9)
+        L_white = max(L_white, 1.0)  # Ensure at least 1.0 to avoid issues
+
+        # Apply Reinhard formula with white point to luminance
+        # Formula: L_out = (L * (1 + L/L_white²)) / (1 + L)
+        L_white_sq = L_white * L_white
+        L_mapped = (L_scaled * (1.0 + L_scaled / L_white_sq)) / (1.0 + L_scaled)
+
+        # Reconstruct RGB preserving chromaticity (color ratios)
+        # Scale each channel by the ratio of mapped to original luminance
+        if hdr.ndim == 3 and hdr.shape[-1] == 3:
+            # Avoid division by zero
+            scale_factor = L_mapped / (L + delta)
+            # Expand scale_factor to match RGB shape: (H, W) -> (H, W, 1)
+            scale_factor = scale_factor[..., np.newaxis]
+            rgb_out = hdr * scale_factor
+        else:
+            rgb_out = L_mapped
+
+        return rgb_out
+
+    def _reinhard_extended(self, hdr: np.ndarray) -> np.ndarray:
         """
-        Extended Reinhard operator with white point:
-        L_out = L_in * (1 + L_in/L_white²) / (1 + L_in)
+        Extended Reinhard operator with manual white point control.
 
-        Values at L_white and above are mapped closer to 1.0 (white).
-        Input is expected to be normalized HDR values.
+        Similar to standard Reinhard but uses user-specified white point
+        instead of auto-computed one.
+
+        Args:
+            hdr: Linear RGB HDR image (already exposure-adjusted)
+
+        Returns:
+            Linear RGB SDR image in [0, 1] range
         """
+        delta = 1e-6
+
+        # Compute luminance
+        if hdr.ndim == 3 and hdr.shape[-1] == 3:
+            luminance_weights = np.array([0.2126, 0.7152, 0.0722], dtype=hdr.dtype)
+            L = np.dot(hdr, luminance_weights)
+        else:
+            L = hdr
+
+        L = np.maximum(L, 0.0)
+
+        # Compute log-average luminance and scale with exposure clipping
+        log_avg_luminance = np.exp(np.mean(np.log(delta + L)))
+        exposure = self.key_value / log_avg_luminance
+        exposure = np.clip(exposure, self.min_exp, self.max_exp)
+        L_scaled = exposure * L
+
+        # Use user-specified white point
         L_white = self.white_point
+        L_white_sq = L_white * L_white
 
-        # Extended Reinhard formula
-        numerator = x * (1.0 + x / (L_white * L_white))
-        denominator = 1.0 + x
-        return numerator / denominator
+        # Apply Reinhard formula to luminance
+        L_mapped = (L_scaled * (1.0 + L_scaled / L_white_sq)) / (1.0 + L_scaled)
 
-    def _aces_filmic(self, x: np.ndarray) -> np.ndarray:
+        # Reconstruct RGB preserving chromaticity
+        if hdr.ndim == 3 and hdr.shape[-1] == 3:
+            scale_factor = L_mapped / (L + delta)
+            scale_factor = scale_factor[..., np.newaxis]
+            rgb_out = hdr * scale_factor
+        else:
+            rgb_out = L_mapped
+
+        return rgb_out
+
+    def _aces_filmic(self, hdr: np.ndarray) -> np.ndarray:
         """
         ACES Filmic tone mapping curve (approximation).
 
         Provides a cinematic S-curve with nice shoulder and toe rolloff.
         Based on Narkowicz 2015 ACES approximation.
-        Input is expected to be normalized HDR values.
+
+        ACES applies the curve to RGB channels directly (not luminance-based)
+        but we still use key_value for exposure scaling via luminance.
+
+        Args:
+            hdr: Linear RGB HDR image (already exposure-adjusted)
+
+        Returns:
+            Linear RGB SDR image in [0, 1] range
         """
+        delta = 1e-6
+
+        # Compute luminance for exposure scaling
+        if hdr.ndim == 3 and hdr.shape[-1] == 3:
+            luminance_weights = np.array([0.2126, 0.7152, 0.0722], dtype=hdr.dtype)
+            L = np.dot(hdr, luminance_weights)
+        else:
+            L = hdr
+
+        L = np.maximum(L, 0.0)
+
+        # Compute log-average luminance and scale with exposure clipping
+        log_avg_luminance = np.exp(np.mean(np.log(delta + L)))
+        exposure_scale = self.key_value / log_avg_luminance
+        exposure_scale = np.clip(exposure_scale, self.min_exp, self.max_exp)
+
+        # Apply exposure scaling to RGB
+        hdr_scaled = hdr * exposure_scale
+
         # ACES coefficients (Narkowicz 2015 approximation)
-        # Simplified Hill function form
         a = 2.51
         b = 0.03
         c = 2.43
+        d = 2.43
+        e = 0.59
 
-        # Apply ACES curve: (x*(a*x+b))/(x*(a*x+b)+c)
-        numerator = x * (a * x + b)
-        denominator = x * (a * x + b) + c
-        return np.clip(numerator / denominator, 0.0, 1.0)
+        # Apply ACES curve to each RGB channel
+        # Formula: (x*(a*x+b))/(x*(c*x+d)+e)
+        numerator = hdr_scaled * (a * hdr_scaled + b)
+        denominator = hdr_scaled * (c * hdr_scaled + d) + e
+
+        result = numerator / denominator
+        return np.clip(result, 0.0, 1.0)
 
     def update_metadata(self, img_data: ImageData) -> None:
         """Update metadata after tone mapping."""
