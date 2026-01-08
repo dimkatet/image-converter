@@ -76,6 +76,7 @@ from image_pipeline.io.formats.png import PNGFormatReader
 from image_pipeline.io.formats.tiff.reader import TiffFormatReader
 from image_pipeline.io.formats.avif import AVIFFormatReader
 from image_pipeline.io.formats.webp import WebPFormatReader
+from image_pipeline.io.formats.exr import EXRFormatReader
 
 ImageReader.register_format(
     extensions=['.png'],
@@ -95,6 +96,11 @@ ImageReader.register_format(
 ImageReader.register_format(
     extensions=['.webp'],
     reader_class=WebPFormatReader
+)
+
+ImageReader.register_format(
+    extensions=['.exr'],
+    reader_class=EXRFormatReader
 )
 
 # JPEG - automatically detects standard JPEG vs Ultra HDR

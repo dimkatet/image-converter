@@ -6,8 +6,8 @@ import tifffile
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatReader
-from image_pipeline.types import ColorSpace, ImageMetadata, TransferFunction
-from image_pipeline.constants import STANDARD_COLOR_PRIMARIES
+from image_pipeline.types import ImageMetadata, TransferFunction
+from image_pipeline.color import match_color_space
 
 
 class TiffFormatReader(FormatReader):
@@ -36,7 +36,7 @@ class TiffFormatReader(FormatReader):
 
                 if primaries:
                     # Try to match to a standard color space
-                    color_space = self._match_color_space(primaries)
+                    color_space = match_color_space(primaries)
 
                     if color_space:
                         # Matched a standard color space
@@ -142,29 +142,3 @@ class TiffFormatReader(FormatReader):
                 except (ValueError, TypeError):
                     # Skip invalid values
                     pass
-
-    @staticmethod
-    def _match_color_space(primaries: Dict[str, Tuple[float, float]],
-                          tolerance: float = 0.001) -> Optional[ColorSpace]:
-        """
-        Match chromaticity primaries to a standard color space
-
-        Args:
-            primaries: Dictionary with chromaticity coordinates
-            tolerance: Maximum allowed difference for matching (default: 0.001)
-
-        Returns:
-            ColorSpace enum if matched, None otherwise
-        """
-        for color_space, std_primaries in STANDARD_COLOR_PRIMARIES.items():
-            # Check if all primaries match within tolerance
-            matches = all(
-                abs(primaries[color][0] - std_primaries[color][0]) < tolerance and
-                abs(primaries[color][1] - std_primaries[color][1]) < tolerance
-                for color in ['red', 'green', 'blue', 'white']
-            )
-
-            if matches:
-                return color_space
-
-        return None

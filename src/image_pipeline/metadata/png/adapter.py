@@ -5,10 +5,10 @@ from typing import Optional
 
 from image_pipeline.types import ImageMetadata
 from image_pipeline.constants import (
-    STANDARD_COLOR_PRIMARIES,
     TRANSFER_TO_CICP,
     COLORSPACE_TO_CICP,
 )
+from image_pipeline.color import get_primaries_from_metadata
 from .codec import CICPData, MDCVData, CLLIData, CHRMData, SRGBData
 
 
@@ -106,21 +106,17 @@ class PNGMetadataAdapter:
         """
         peak_luminance = metadata.get('mastering_display_max_luminance')
         min_luminance = metadata.get('mastering_display_min_luminance', 0.0001)
-        
+
         # Валидация: нужен peak_luminance
         if not peak_luminance:
             return None
-        
+
         # Получаем primaries - приоритет custom, иначе standard
-        primaries = None
-        primaries = metadata.get('color_primaries')
-        color_space = metadata.get('color_space')
-        if not primaries:
-          if not color_space:
-            return None
-          primaries = STANDARD_COLOR_PRIMARIES.get(color_space)
-            
-        
+        primaries = get_primaries_from_metadata(
+            metadata.get('color_space'),
+            metadata.get('color_primaries')
+        )
+
         # Если primaries не определены - не создаём chunk
         if not primaries:
             return None
@@ -189,13 +185,10 @@ class PNGMetadataAdapter:
         cHRM is a standard PNG chunk for chromaticity coordinates
         """
         # Получаем primaries - приоритет custom, иначе standard
-        primaries = metadata.get('color_primaries')
-        color_space = metadata.get('color_space')
-
-        if not primaries:
-            if not color_space:
-                return None
-            primaries = STANDARD_COLOR_PRIMARIES.get(color_space)
+        primaries = get_primaries_from_metadata(
+            metadata.get('color_space'),
+            metadata.get('color_primaries')
+        )
 
         # Если primaries не определены - не создаём chunk
         if not primaries:

@@ -123,18 +123,21 @@ ImageSaver.save_with_format_conversion(
 
 ### Reading
 - **TIFF/TIF**: uint8, uint16, uint32, float32, float64 (with LZW, Deflate, ZSTD, JPEG compression)
-- **PNG**: uint8, uint16 (with HDR metadata support planned)
+- **PNG**: uint8, uint16
 - **AVIF**: uint8, uint10, uint12 with HDR metadata
-- **HDR formats**: EXR, HDR, PFM (float32, float64)
-- **Standard**: JPEG, BMP, WebP, GIF
+- **OpenEXR**: float16 (HALF), float32 (FLOAT) with chromaticities and whiteLuminance metadata
+- **WebP**: lossy/lossless modes
+- **JPEG**: uint8 (including Ultra HDR detection)
 
 ### Writing
-- **TIFF**: all data types, compression (LZW, Deflate, ZSTD, JPEG)
 - **PNG**: uint8, uint16 (via pypng for 16-bit) with HDR metadata (cICP, mDCv, cLLi chunks)
 - **AVIF**: uint8, uint10, uint12 with HDR10 metadata
+- **OpenEXR**: float16 (HALF), float32 (FLOAT) with chromaticities and whiteLuminance metadata
+  - Compression: ZIP (default), PIZ, RLE, ZIPS, PXR24, B44, B44A, DWAA, DWAB, or none
+  - Pixel types: half (float16), float (float32), uint (uint32)
+  - Always scene-linear (LINEAR transfer function)
 - **WebP**: lossy/lossless modes
-- **HDR**: EXR, HDR, PFM (float32, float64)
-- **Standard**: JPEG (uint8 only)
+- **JPEG**: uint8 only
 
 ## CLI Usage
 
@@ -149,6 +152,12 @@ python main.py input.tiff output.avif \
   --filter absolute_luminance:paper_white=100 \
   --filter pq_encode:reference_peak=10000 \
   --filter quantize:bit_depth=12 \
+  --verbose
+
+# OpenEXR with metadata: Scene-linear → Display-referred → EXR with BT.2020 primaries
+python main.py input.tiff output.exr \
+  --filter color_convert:source=bt709,target=bt2020 \
+  --filter absolute_luminance:paper_white=100 \
   --verbose
 
 # List available filters
@@ -392,9 +401,55 @@ MIT
 
 Dima Teterin (tet.dima.211@gmail.com)
 
+## OpenEXR Support
+
+OpenEXR is fully supported for reading and writing scene-linear HDR data with standard metadata.
+
+### Features
+- **Pixel types**: HALF (float16), FLOAT (float32), UINT (uint32)
+- **Compression**: ZIP (default), PIZ, RLE, ZIPS, PXR24, B44, B44A, DWAA, DWAB, none
+- **Color primaries**: Chromaticities for BT.709, BT.2020, Display P3, or custom primaries
+- **Luminance metadata**: whiteLuminance (maps to paper_white)
+- **Transfer function**: Always LINEAR (EXR files are scene-linear by definition)
+
+### Usage Example
+
+```python
+from image_pipeline import ImageReader, ImageWriter, ImageData
+from image_pipeline.types import ColorSpace
+
+# Read scene-linear EXR
+reader = ImageReader('scene_linear.exr')
+img_data = reader.read()
+# Metadata contains: color_space=BT709, transfer_function=LINEAR, paper_white
+
+# Write EXR with BT.2020 primaries
+img_data.metadata['color_space'] = ColorSpace.BT2020
+img_data.metadata['paper_white'] = 100.0
+
+writer = ImageWriter('output.exr', img_data)
+writer.write(options={'compression': 'zip', 'pixel_type': 'half'})
+```
+
+### Metadata Mapping
+
+| OpenEXR Attribute  | ImageMetadata Field | Description |
+|--------------------|---------------------|-------------|
+| `chromaticities`   | `color_space` or `color_primaries` | CIE 1931 xy color primaries (red, green, blue, white) |
+| `whiteLuminance`   | `paper_white` | Reference white luminance in cd/m² (nits) |
+| (always LINEAR)    | `transfer_function` | Scene-linear transfer function |
+
+### Notes
+- EXR files are always scene-referred with LINEAR transfer function
+- Color primaries are automatically matched to standard color spaces (BT.709, BT.2020, Display P3)
+- Custom primaries are preserved if they don't match standard spaces
+- Default color space is BT.709 if no chromaticities are present
+- For display-referred workflows, use `RelativeLuminanceFilter` to convert before writing to EXR
+
 ## Roadmap
 
 - [x] AVIF format support (completed)
+- [x] OpenEXR format support with metadata (completed)
 - [x] Color space conversion (BT.709, BT.2020, Display P3) (completed)
 - [x] Scene/display-referred workflows (completed)
 - [ ] Metadata reading from PNG/AVIF (cICP, mDCv, cLLi chunks)

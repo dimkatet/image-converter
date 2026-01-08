@@ -13,6 +13,13 @@ from image_pipeline.color.matrices import (
     compute_xyz_to_rgb_matrix,
     get_precomputed_matrix,
 )
+from image_pipeline.color.chromaticities import (
+    match_color_space,
+    get_primaries_for_color_space,
+    get_primaries_from_metadata,
+    primaries_to_openexr_chromaticities,
+    openexr_chromaticities_to_primaries,
+)
 
 __all__ = [
     'convert_color_space',
@@ -20,4 +27,9 @@ __all__ = [
     'compute_rgb_to_xyz_matrix',
     'compute_xyz_to_rgb_matrix',
     'get_precomputed_matrix',
+    'match_color_space',
+    'get_primaries_for_color_space',
+    'get_primaries_from_metadata',
+    'primaries_to_openexr_chromaticities',
+    'openexr_chromaticities_to_primaries',
 ]

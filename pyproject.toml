@@ -18,7 +18,8 @@ dependencies = [
     "tifffile",
     "scipy",
     "pypng",
-    "imagecodecs"
+    "imagecodecs",
+    "OpenEXR>=3.4.0"
 ]
 
 [project.optional-dependencies]
