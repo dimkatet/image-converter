@@ -4,7 +4,7 @@ A flexible library for professional HDR image processing with support for PQ enc
 
 ## Features
 
-- **Wide format support**: TIFF, PNG (8/16-bit), JPEG, WebP, AVIF, EXR, HDR, PFM
+- **Wide format support**: TIFF, PNG (8/16-bit), JPEG, WebP, AVIF, JPEG XR, OpenEXR, HDR, PFM
 - **Professional HDR workflows**: scene-referred ↔ display-referred conversion with paper white tracking
 - **PQ encoding**: Perceptual Quantizer (ST.2084) support for HDR10 content
 - **Color space conversion**: RGB color space transforms (BT.709, BT.2020, Display P3) via CIE XYZ
@@ -126,6 +126,7 @@ ImageSaver.save_with_format_conversion(
 - **PNG**: uint8, uint16
 - **AVIF**: uint8, uint10, uint12 with HDR metadata
 - **OpenEXR**: float16 (HALF), float32 (FLOAT) with chromaticities and whiteLuminance metadata
+- **JPEG XR** (.jxr, .wdp, .hdp): uint8, uint16, float16, float32 (HDR support)
 - **WebP**: lossy/lossless modes
 - **JPEG**: uint8 (including Ultra HDR detection)
 
@@ -136,6 +137,10 @@ ImageSaver.save_with_format_conversion(
   - Compression: ZIP (default), PIZ, RLE, ZIPS, PXR24, B44, B44A, DWAA, DWAB, or none
   - Pixel types: half (float16), float (float32), uint (uint32)
   - Always scene-linear (LINEAR transfer function)
+- **JPEG XR** (.jxr, .wdp, .hdp): uint8, uint16, float16, float32 (HDR support)
+  - Lossless mode: true lossless for uint8/uint16, minimal loss (~6e-5) for float
+  - Lossy mode: quality 1-100
+  - Note: No extended metadata support (use PNG/AVIF/EXR for HDR metadata)
 - **WebP**: lossy/lossless modes
 - **JPEG**: uint8 only
 
@@ -158,6 +163,18 @@ python main.py input.tiff output.avif \
 python main.py input.tiff output.exr \
   --filter color_convert:source=bt709,target=bt2020 \
   --filter absolute_luminance:paper_white=100 \
+  --verbose
+
+# JPEG XR lossless HDR output
+python main.py input.exr output.jxr \
+  --filter remove_alpha \
+  --option lossless=true \
+  --verbose
+
+# JPEG XR lossy compression
+python main.py input.tiff output.jxr \
+  --option lossless=false \
+  --option quality=85 \
   --verbose
 
 # List available filters

@@ -84,6 +84,7 @@ from .formats.avif import AVIFFormatWriter
 from .formats.webp import WebPFormatWriter
 from .formats.jpeg import JPEGWriter
 from .formats.exr import EXRFormatWriter
+from .formats.jxr import JXRFormatWriter
 
 ImageWriter.register_format(
     extensions=['.png'],
@@ -108,4 +109,9 @@ ImageWriter.register_format(
 ImageWriter.register_format(
     extensions=['.exr'],
     writer_class=EXRFormatWriter
+)
+
+ImageWriter.register_format(
+    extensions=['.jxr', '.wdp', '.hdp'],
+    writer_class=JXRFormatWriter
 )
