@@ -90,7 +90,7 @@ class EXRFormatWriter(FormatWriter):
             exr_options: Adapted EXR options (compression, pixel_type)
         """
         try:
-            height, width, channels = pixels.shape
+            _, _, channels = pixels.shape
             has_alpha = channels == 4
 
             # Get options

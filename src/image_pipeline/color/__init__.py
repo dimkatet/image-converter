@@ -17,8 +17,6 @@ from image_pipeline.color.chromaticities import (
     match_color_space,
     get_primaries_for_color_space,
     get_primaries_from_metadata,
-    primaries_to_openexr_chromaticities,
-    openexr_chromaticities_to_primaries,
 )
 
 __all__ = [
@@ -30,6 +28,4 @@ __all__ = [
     'match_color_space',
     'get_primaries_for_color_space',
     'get_primaries_from_metadata',
-    'primaries_to_openexr_chromaticities',
-    'openexr_chromaticities_to_primaries',
 ]

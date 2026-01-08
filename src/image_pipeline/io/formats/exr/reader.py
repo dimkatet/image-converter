@@ -7,7 +7,7 @@ import Imath
 
 from image_pipeline.core.image_data import ImageData
 from image_pipeline.io.formats.base import FormatReader
-from image_pipeline.types import ImageMetadata, TransferFunction
+from image_pipeline.types import TransferFunction
 from .metadata import EXRMetadataAdapter
 
 
@@ -43,10 +43,8 @@ class EXRFormatReader(FormatReader):
 
             if has_alpha:
                 channel_names = ['R', 'G', 'B', 'A']
-                num_channels = 4
             else:
                 channel_names = ['R', 'G', 'B']
-                num_channels = 3
 
             # Check that all required channels exist
             for ch in channel_names:
