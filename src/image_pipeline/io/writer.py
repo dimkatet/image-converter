@@ -81,6 +81,7 @@ class ImageWriter:
 # Import and register formats
 from .formats.png import PNGFormatWriter
 from .formats.avif import AVIFFormatWriter
+from .formats.tiff import TiffFormatWriter
 from .formats.webp import WebPFormatWriter
 from .formats.jpeg import JPEGWriter
 from .formats.exr import EXRFormatWriter
@@ -89,6 +90,11 @@ from .formats.jxr import JXRFormatWriter
 ImageWriter.register_format(
     extensions=['.png'],
     writer_class=PNGFormatWriter
+)
+
+ImageWriter.register_format(
+    extensions=['.tiff', '.tif'],
+    writer_class=TiffFormatWriter
 )
 
 ImageWriter.register_format(

@@ -95,11 +95,11 @@ class TestImageReaderFacade:
         """Test ImageReader creates JPEG reader for .jpg extension"""
         jpeg_path = tmp_path / "test.jpg"
 
-        # Create minimal JPEG using Pillow
-        from PIL import Image
+        # Create minimal JPEG using imagecodecs
+        from imagecodecs import jpeg_encode
         pixels = np.random.randint(0, 256, (8, 8, 3), dtype=np.uint8)
-        img = Image.fromarray(pixels, mode='RGB')
-        img.save(jpeg_path, quality=95)
+        jpeg_bytes = jpeg_encode(pixels, level=95)
+        jpeg_path.write_bytes(jpeg_bytes)
 
         reader = ImageReader(str(jpeg_path))
         assert reader._reader is not None
@@ -108,10 +108,10 @@ class TestImageReaderFacade:
         """Test ImageReader handles .jpeg extension"""
         jpeg_path = tmp_path / "test.jpeg"
 
-        from PIL import Image
+        from imagecodecs import jpeg_encode
         pixels = np.random.randint(0, 256, (8, 8, 3), dtype=np.uint8)
-        img = Image.fromarray(pixels, mode='RGB')
-        img.save(jpeg_path, quality=95)
+        jpeg_bytes = jpeg_encode(pixels, level=95)
+        jpeg_path.write_bytes(jpeg_bytes)
 
         reader = ImageReader(str(jpeg_path))
         assert reader._reader is not None
@@ -152,12 +152,16 @@ class TestImageReaderFacade:
 
     def test_read_delegates_to_format_reader(self, tmp_path):
         """Test ImageReader.read() delegates to format-specific reader"""
-        # Create a simple PNG
-        from PIL import Image
+        # Create a simple PNG using pypng (already a dependency)
+        import png
         png_path = tmp_path / "test.png"
         pixels = np.random.randint(0, 256, (8, 8, 3), dtype=np.uint8)
-        img = Image.fromarray(pixels, mode='RGB')
-        img.save(png_path)
+
+        with open(png_path, 'wb') as f:
+            writer = png.Writer(width=8, height=8, greyscale=False, bitdepth=8)
+            # pypng expects 2D array (rows of RGB triplets)
+            pixels_2d = pixels.reshape(8, -1).tolist()
+            writer.write(f, pixels_2d)
 
         reader = ImageReader(str(png_path))
         result = reader.read()

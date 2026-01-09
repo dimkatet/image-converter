@@ -275,7 +275,6 @@ image_pipeline/
 
 - Python ≥ 3.12
 - NumPy
-- Pillow
 - tifffile
 - scipy
 - pypng
@@ -408,7 +407,7 @@ pyinstaller --onefile --name image-pipeline main.py
 dist\image-pipeline.exe input.tiff output.png --filter blur:sigma=2.0
 ```
 
-**Note**: The executable will be 100-300 MB due to NumPy, Pillow, and scipy bundled inside.
+**Note**: The executable will be 100-300 MB due to NumPy and scipy bundled inside.
 
 ## License
 
