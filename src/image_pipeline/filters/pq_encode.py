@@ -36,7 +36,7 @@ class PQEncodeFilter(ImageFilter):
         self.validate(pixels)
 
         # Validate dtype
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
 
         # Clip to [0, reference_peak]
         clipped = np.clip(pixels, 0.0, self.reference_peak)

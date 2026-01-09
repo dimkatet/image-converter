@@ -466,11 +466,15 @@ writer.write(options={'compression': 'zip', 'pixel_type': 'half'})
 
 - [x] AVIF format support (completed)
 - [x] OpenEXR format support with metadata (completed)
+- [x] JPEG XR format support with HDR capabilities (completed)
 - [x] Color space conversion (BT.709, BT.2020, Display P3) (completed)
 - [x] Scene/display-referred workflows (completed)
-- [ ] Metadata reading from PNG/AVIF (cICP, mDCv, cLLi chunks)
-- [ ] Tone mapping operators (Reinhard, ACES, etc.)
+- [x] sRGB encode/decode filters for SDR workflows (completed)
+- [x] Tone mapping operators (Reinhard, ACES) (completed)
+- [x] float16 support for all HDR filters (completed)
+- [ ] Metadata reading from PNG/AVIF (cICP, mDCv, cLLi chunks) - writers implemented, readers TODO
 - [ ] Brightness/contrast filters with MaxCLL/MaxFALL updates
 - [ ] Batch processing via CLI
 - [ ] Extended metadata (EXIF, ICC profiles)
 - [ ] Additional color spaces (Lab, XYZ direct support)
+- [ ] Type conversion filter (float16 ↔ float32 ↔ float64)

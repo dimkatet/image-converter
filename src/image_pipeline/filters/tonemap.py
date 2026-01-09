@@ -122,7 +122,7 @@ class ToneMappingFilter(ImageFilter):
         self.validate(pixels)
 
         # Validate dtype - should be float for HDR data
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
 
         # Clip negative values (can occur from floating point errors or data artifacts)
         hdr = np.maximum(pixels, 0.0)

@@ -85,7 +85,7 @@ class ColorConvertFilter(ImageFilter):
 
         Args:
             pixels: Linear RGB image array, shape (H, W, 3) or (H, W, 4).
-                    Must be float32/float64 dtype (linear, no gamma).
+                    Must be float16/float32/float64 dtype (linear, no gamma).
 
         Returns:
             Converted pixels with same shape and dtype.
@@ -96,7 +96,7 @@ class ColorConvertFilter(ImageFilter):
         self.validate(pixels)
 
         # Validate dtype (must be float for linear RGB)
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
 
         # No-op if source == target
         if self.source == self.target:

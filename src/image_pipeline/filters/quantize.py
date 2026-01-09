@@ -38,7 +38,7 @@ class QuantizeFilter(ImageFilter):
         self.validate(pixels)
         
         # Validate dtype
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
         
         # Clip values to [0, 1] with warning
         if pixels.min() < 0.0 or pixels.max() > 1.0:

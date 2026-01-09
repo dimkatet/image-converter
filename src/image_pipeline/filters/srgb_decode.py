@@ -35,7 +35,7 @@ class SRGBDecodeFilter(ImageFilter):
         self.validate(pixels)
 
         # Validate dtype
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
 
         # Range check [0, 1] for sRGB-encoded values
         self._check_range(pixels, 0.0, 1.0)

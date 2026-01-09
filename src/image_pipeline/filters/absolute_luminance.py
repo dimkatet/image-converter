@@ -38,7 +38,7 @@ class AbsoluteLuminanceFilter(ImageFilter):
         self.validate(pixels)
 
         # Validate dtype - should be float for HDR data
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
 
         # Scale scene-referred values to absolute nits
         result = pixels * self.paper_white

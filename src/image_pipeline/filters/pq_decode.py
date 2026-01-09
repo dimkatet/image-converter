@@ -31,7 +31,7 @@ class PQDecodeFilter(ImageFilter):
         self.validate(pixels)
         
         # Validate dtype
-        self._check_dtype(pixels, [np.float32, np.float64])
+        self._check_dtype(pixels, [np.float16, np.float32, np.float64])
         
         # Strict range check [0, 1] for PQ-encoded values
         self._check_range(pixels, 0.0, 1.0)
